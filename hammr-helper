@@ -1,0 +1,60 @@
+#!/bin/sh
+
+BASEDIR=`pwd`
+
+COMMONLOC="file://${BASEDIR}/Common.jar"
+
+REGISTRYLOC=localhost
+
+BINDIRS=Client/bin:Common/bin:Launcher/bin:Manager/bin
+LIBDIRS=~/Downloads/jgrapht-0.8.1/jgrapht-0.8.1-local/jgrapht-jdk1.6.jar
+
+export CLASSPATH=$BINDIRS:$LIBDIRS
+
+Compile() {
+	ant -buildfile Common/build.xml
+	ant -buildfile Client/build.xml
+	ant -buildfile Manager/build.xml
+	ant -buildfile Launcher/build.xml
+
+	jar cvf Common.jar -C Common/bin .
+}
+
+Clean() {
+	ant -buildfile Common/build.xml clean
+	ant -buildfile Client/build.xml clean
+	ant -buildfile Manager/build.xml clean
+	ant -buildfile Launcher/build.xml clean
+
+	rm -f Common.jar
+}
+
+RunManager() {
+	echo "Running manager: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
+	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=Manager/security.policy manager.ConcreteManager $REGISTRYLOC &
+}
+
+RunLauncher() {
+	echo "Running launcher: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC &
+}
+
+RunClient() {
+	echo "Running client: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=Client/security.policy client.Client $REGISTRYLOC &
+}
+
+COMMAND=$1
+
+shift
+
+case "${COMMAND}" in
+    compile) Compile $@ ;;
+    clean) Clean $@ ;;
+    manager) RunManager $@ ;;
+    launcher) RunLauncher $@ ;;
+    client) RunClient $@ ;;
+esac
+
+exit 0
