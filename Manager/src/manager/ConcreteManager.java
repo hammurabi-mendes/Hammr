@@ -8,8 +8,9 @@ import java.rmi.RemoteException;
 import java.util.Random;
 import java.util.Collections;
 
-import java.util.ArrayList;
+import java.util.Set;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
@@ -29,22 +30,22 @@ import scheduler.ConcreteScheduler;
 import utilities.RMIHelper;
 
 public class ConcreteManager implements Manager {
-	private Map<String, Scheduler> runningSchedulers;
+	private String baseDirectory;
 
 	private Map<String, Launcher> registeredLaunchers;
 
-	private Map<String, Map<String, InetSocketAddress>> registeredSocketAddresses;
+	private Map<String, ApplicationInformationHolder> applicationInformationHolders;
 
 	private Random random;
 
-	public ConcreteManager() {
-		runningSchedulers = Collections.synchronizedMap(new LinkedHashMap<String, Scheduler>());
+	public ConcreteManager(String baseDirectory) {
+		this.baseDirectory = baseDirectory;
 
-		registeredLaunchers = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
+		this.registeredLaunchers = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
 
-		registeredSocketAddresses = Collections.synchronizedMap(new HashMap<String, Map<String, InetSocketAddress>>());
+		this.applicationInformationHolders = Collections.synchronizedMap(new HashMap<String, ApplicationInformationHolder>());
 
-		random = new Random();
+		this.random = new Random();
 	}
 
 	public boolean registerLauncher(Launcher launcher) {
@@ -66,15 +67,17 @@ public class ConcreteManager implements Manager {
 	}
 
 	public boolean registerApplication(ApplicationSpecification applicationSpecification) {
-		String application = applicationSpecification.getName();
+		String applicationName = applicationSpecification.getName();
 
-		if(runningSchedulers.containsKey(application)) {
-			System.err.println("Application " + application + " is still running");
+		if(applicationInformationHolders.containsKey(applicationName)) {
+			System.err.println("Application " + applicationName + " is still running!");
 
 			return false;
 		}
 
-		Scheduler scheduler = setupApplication(application);
+		ApplicationInformationHolder applicationInformationHolder = setupApplication(applicationName, applicationSpecification);
+
+		Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
 
 		try {
 			if(!scheduler.setup(applicationSpecification)) {
@@ -91,17 +94,17 @@ public class ConcreteManager implements Manager {
 		} catch (InsufficientLaunchersException exception) {
 			System.err.println("Initial schedule indicated an insufficient number of launchers");
 
-			finishApplication(application);
+			finishApplication(applicationName);
 			return false;
 		} catch (TemporalDependencyException exception) {
 			System.err.println("Scheduler setup found a temporal dependency problem");
 
-			finishApplication(application);
+			finishApplication(applicationName);
 			return false;
 		} catch (CyclicDependencyException exception) {
 			System.err.println("Scheduler setup found a cyclic dependency problem");
 
-			finishApplication(application);
+			finishApplication(applicationName);
 			return false;
 		}
 
@@ -109,25 +112,29 @@ public class ConcreteManager implements Manager {
 	}
 
 	public boolean insertSocketAddress(String application, String name, InetSocketAddress socketAddress) throws RemoteException {
-		Map<String, InetSocketAddress> applicationRegisteredSocketAddresses = registeredSocketAddresses.get(application);
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
-		if(applicationRegisteredSocketAddresses == null) {
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for application " + application + "!");
+
 			return false;
 		}
 
-		applicationRegisteredSocketAddresses.put(name, socketAddress);
+		applicationInformationHolder.addRegisteredSocketAddresses(name, socketAddress);
 
 		return true;
 	}
 
 	public InetSocketAddress obtainSocketAddress(String application, String name) throws RemoteException {
-		Map<String, InetSocketAddress> applicationRegisteredSocketAddresses = registeredSocketAddresses.get(application);
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
-		if(applicationRegisteredSocketAddresses == null) {
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for application " + application + "!");
+
 			return null;
 		}
 
-		while(!applicationRegisteredSocketAddresses.containsKey(name)) {
+		while(applicationInformationHolder.getRegisteredSocketAddress(name) == null) {
 			try {
 				Thread.sleep(100);
 			} catch (InterruptedException exception) {
@@ -135,11 +142,21 @@ public class ConcreteManager implements Manager {
 			}
 		}
 
-		return applicationRegisteredSocketAddresses.get(name);
+		return applicationInformationHolder.getRegisteredSocketAddress(name);
 	}
 
 	public boolean handleTermination(ResultSummary resultSummary) {
-		Scheduler scheduler = runningSchedulers.get(resultSummary.getNodeGroupApplication());
+		String application = resultSummary.getNodeGroupApplication();
+
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
+
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for NodeGroup with application " + resultSummary.getNodeGroupApplication() + " and serial number " + resultSummary.getNodeGroupSerialNumber() + "!");
+
+			return false;
+		}
+
+		Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
 
 		if(scheduler == null) {
 			System.err.println("Unable to locate running scheduler for NodeGroup with application " + resultSummary.getNodeGroupApplication() + " and serial number " + resultSummary.getNodeGroupSerialNumber() + "!");
@@ -153,6 +170,8 @@ public class ConcreteManager implements Manager {
 			finishApplication(resultSummary.getNodeGroupApplication());
 			return false;
 		}
+
+		applicationInformationHolder.addReceivedResultSummaries(resultSummary);
 
 		try {
 			if(scheduler.finished()) {
@@ -171,26 +190,35 @@ public class ConcreteManager implements Manager {
 		}
 	}
 
-	private synchronized Scheduler setupApplication(String application) {
-		Scheduler scheduler = new ConcreteScheduler(this);
+	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) {
+		ApplicationInformationHolder applicationInformationHolder = new ApplicationInformationHolder();
 
-		runningSchedulers.put(application, scheduler);
+		applicationInformationHolder.setApplicationName(applicationName);
+		applicationInformationHolder.setApplicationSpecification(applicationSpecification);
 
-		registeredSocketAddresses.put(application, new HashMap<String, InetSocketAddress>());
+		applicationInformationHolder.setApplicationScheduler(new ConcreteScheduler(this));
 
-		return scheduler;
+		applicationInformationHolder.markStart();
+
+		applicationInformationHolders.put(applicationName, applicationInformationHolder);
+
+		return applicationInformationHolder;
 	}
 
-	private synchronized boolean finishApplication(String application) {
-		Scheduler scheduler = runningSchedulers.get(application);
+	private synchronized boolean finishApplication(String applicationName) {
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(applicationName);
 
-		if(scheduler == null) {
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for application " + applicationName + "!");
+
 			return false;
 		}
 
-		runningSchedulers.remove(application);
+		applicationInformationHolders.remove(applicationName);
 
-		registeredSocketAddresses.remove(application);
+		applicationInformationHolder.markFinish();
+
+		processApplicationResultSummaries(applicationName, applicationInformationHolder.getTotalRunningTime(), applicationInformationHolder.getReceivedResultSummaries());
 
 		return true;
 	}
@@ -223,16 +251,22 @@ public class ConcreteManager implements Manager {
 		return null;
 	}
 
+	private void processApplicationResultSummaries(String application, long runningTime, Set<ResultSummary> applicationResultSummaries) {
+		ResultGenerator resultGenerator = new ResultGenerator(baseDirectory, application, runningTime, applicationResultSummaries);
+
+		resultGenerator.start();
+	}
+
 	public static void main(String[] arguments) {
-		if(arguments.length != 1) {
-			System.err.println("Usage: You must supply the registry location");
+		if(arguments.length != 2) {
+			System.err.println("Usage: ConcreteManager <registry_location> <base_directory>");
 
 			System.exit(1);
 		}	
 
 		String registryLocation = arguments[0];
 
-		ConcreteManager concreteManager = new ConcreteManager();
+		ConcreteManager concreteManager = new ConcreteManager(arguments[1]);
 
 		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", concreteManager);
 	}

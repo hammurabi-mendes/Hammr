@@ -303,11 +303,15 @@ public class ExecutionHandler extends Thread {
 		}
 
 		public long getCpuTime() {
-			return cpuLocalTimerFinish - cpuLocalTimerStart;
+			// We get results in milliseconds, not in nanoseconds
+			
+			return (cpuLocalTimerFinish - cpuLocalTimerStart) / 1000000;
 		}
 
 		public long getUserTime() {
-			return userLocalTimerFinish - userLocalTimerStart;
+			// We get results in milliseconds, not in nanoseconds
+			
+			return (userLocalTimerFinish - userLocalTimerStart) / 1000000;
 		}
 
 		public NodeMeasurements getNodeMeasurements() {

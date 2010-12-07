@@ -64,7 +64,7 @@ public class ConcreteLauncher implements Launcher {
 
 	public static void main(String[] arguments) {
 		if(arguments.length != 1) {
-			System.err.println("Usage: You must supply the registry location");
+			System.err.println("Usage: ConcreteLauncher <registry_location>");
 
 			System.exit(1);
 		}
