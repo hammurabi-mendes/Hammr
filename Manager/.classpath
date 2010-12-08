@@ -3,5 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Common"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.launching.macosx.MacOSXType/JVM 1.6.0 (MacOS X Default)"/>
+	<classpathentry kind="lib" path="/Users/hmendes/Documents/workspace/Hammr/lib/jgrapht-jdk1.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
