@@ -5,7 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class FileChannelElementWriter implements ChannelElementWriter {
-	ChannelElementOutputStream channelElementOutputStream;
+	private ChannelElementOutputStream channelElementOutputStream;
 
 	public FileChannelElementWriter(String location) throws IOException {
 		channelElementOutputStream = new ChannelElementOutputStream(new FileOutputStream(location));
@@ -13,6 +13,12 @@ public class FileChannelElementWriter implements ChannelElementWriter {
 
 	public synchronized boolean write(ChannelElement channelElement) throws IOException {
 		channelElementOutputStream.writeChannelElement(channelElement);
+
+		return true;
+	}
+
+	public synchronized boolean flush() throws IOException {
+		channelElementOutputStream.flush();
 
 		return true;
 	}

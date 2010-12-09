@@ -8,12 +8,18 @@ import java.io.Serializable;
 public abstract class ChannelHandler implements Serializable {
 	private static final long serialVersionUID = 1L;
 
+	private static long DEFAULT_READ_COUNT_FLUSH = 65535;
+	private static long DEFAULT_WRITE_COUNT_FLUSH = 1024;
+
 	private Type type;
 	private Mode mode;
 	private String name;
 
 	private ChannelElementReader channelElementReader;
 	private ChannelElementWriter channelElementWriter;
+
+	private long readCounter = 0L;
+	private long writeCounter = 0L;
 
 	public ChannelHandler(Type type, Mode mode, String name) {
 		this.type = type;
@@ -63,10 +69,22 @@ public abstract class ChannelHandler implements Serializable {
 	}
 
 	public ChannelElement read() throws EOFException, IOException {
+		readCounter++;
+
+		if((readCounter % DEFAULT_READ_COUNT_FLUSH) == 0) {
+			System.gc();
+		}
+
 		return channelElementReader.read();
 	}
 
 	public boolean write(ChannelElement channelElement) throws IOException {
+		writeCounter++;
+
+		if((writeCounter % DEFAULT_WRITE_COUNT_FLUSH) == 0) {
+			channelElementWriter.flush();
+		}
+
 		return channelElementWriter.write(channelElement);
 	}
 

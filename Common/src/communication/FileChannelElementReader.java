@@ -7,7 +7,7 @@ import java.io.EOFException;
 import java.io.IOException;
 
 public class FileChannelElementReader implements ChannelElementReader {
-	ChannelElementInputStream channelElementInputStream;
+	private ChannelElementInputStream channelElementInputStream;
 
 	public FileChannelElementReader(String location) throws FileNotFoundException, IOException {
 		channelElementInputStream = new ChannelElementInputStream(new FileInputStream(location));

@@ -18,6 +18,10 @@ public class SHMChannelElementWriter implements ChannelElementWriter {
 		return true;
 	}
 
+	public boolean flush() throws IOException {
+		return true;
+	}
+
 	public boolean close() throws IOException {
 		channelElementMultiplexer.close(name);
 
