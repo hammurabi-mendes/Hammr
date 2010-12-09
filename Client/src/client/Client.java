@@ -1,11 +1,13 @@
 package client;
 
+import java.util.Set;
+
+import java.util.List;
+import java.util.ArrayList;
+
 import java.rmi.RemoteException;
 
 import mapreduce.appspecs.MapReduceSpecification;
-import mapreduce.programs.counting.CountingMapper;
-import mapreduce.programs.counting.CountingReducer;
-import mapreduce.programs.counting.CountingMerger;
 
 import interfaces.Manager;
 
@@ -17,7 +19,6 @@ import programs.ReaderSomeoneWriterSomeone;
 
 import appspecs.exceptions.InexistentInputException;
 import appspecs.exceptions.OverlappingOutputException;
-
 
 import utilities.RMIHelper;
 
@@ -245,68 +246,53 @@ public class Client {
 		}
 	}
 
-	public void performTest4(int numberMappers, int numberReducers) {
-		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
-
-		MapReduceSpecification mapReduceSpecification = new MapReduceSpecification("mapreduce", "/Users/hmendes/brown/DC/Project");
-
-		if(!mapReduceSpecification.initialize()) {
-			System.err.println("The directory " + mapReduceSpecification.getAbsoluteDirectory() + " does not exist");
-
-			System.exit(1);
-		}
-
-		Node[] nodesStage1 = new Node[numberMappers];
-
-		for(int i = 0; i < nodesStage1.length; i++) {
-			nodesStage1[i] = new CountingMapper<String>(numberReducers);
-		}
-
-		try {
-			mapReduceSpecification.insertMappers("input-splitter.dat", new ReaderSomeoneWriterSomeone(), nodesStage1);
-		} catch (InexistentInputException exception) {
-			System.err.println(exception);
-
-			System.exit(1);
-		}
-
-		Node[] nodesStage2 = new Node[numberReducers];
-
-		for(int i = 0; i < nodesStage2.length; i++) {
-			nodesStage2[i] = new CountingReducer<String>();
-		}
-
-		try {
-			mapReduceSpecification.insertReducers("output-merger.dat", new CountingMerger<String>(), nodesStage2);
-		} catch (OverlappingOutputException exception) {
-			System.err.println(exception);
-
-			System.exit(1);
-		}
-
-		mapReduceSpecification.setupCommunication(MapReduceSpecification.Type.TCPBASED);
-
-		try {
-			manager.registerApplication(mapReduceSpecification);
-		} catch (RemoteException exception) {
-			System.err.println("Unable to contact manager");
-			exception.printStackTrace();
-
-			System.exit(1);
-		}
-	}
-
 	public static void main(String[] arguments) {
-		if(arguments.length != 1) {
-			System.err.println("Usage: You must supply the registry location");
+		if(arguments.length <= 1) {
+			System.err.println("Usage: Client <registry_location> <command> [<command_argument> ... <comand_argument>]");
 
 			System.exit(1);
 		}
 
 		String registryLocation = arguments[0];
 
-		Client client = new Client(registryLocation);
+		MRClient client = new MRClient(registryLocation);
 
-		client.performTest4(5, 5);
+		String command = arguments[1];
+
+		if(command.equals("split_input")) {
+			if(arguments.length <= 3) {
+				System.err.println("Usage: Client <registry_location> split_input <input_filename> <number_inputs>]");
+
+				System.exit(1);
+			}
+
+			String inputFilename = arguments[2];
+
+			int numberInputs = Integer.parseInt(arguments[3]);
+
+			Set<String> filenames = client.split(inputFilename, numberInputs);
+
+			for(String filename: filenames) {
+				System.out.println(filename);
+			}
+		}
+
+		if(command.equals("perform_mapreduce")) {
+			if(arguments.length <= 2) {
+				System.err.println("Usage: Client <registry_location> perform_mapreduce [<input_filename> ... <input_filename>]");
+
+				System.exit(1);
+			}
+
+			List<String> inputFilenames = new ArrayList<String>();
+
+			for(int i = 2; i < arguments.length; i++) {
+				inputFilenames.add(arguments[i]);
+			}
+
+			String[] finalInputFilenames = inputFilenames.toArray(new String[inputFilenames.size()]);
+
+			client.performMapReduce(finalInputFilenames, MapReduceSpecification.Type.TCPBASED);
+		}
 	}
 }

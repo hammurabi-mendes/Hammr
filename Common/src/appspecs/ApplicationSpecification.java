@@ -115,11 +115,11 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	public void addInitial(Node node, String filename) throws InexistentInputException {
 		if(!FileHelper.exists(getAbsoluteFileName(filename))) {
-			throw new InexistentInputException(filename);
+			throw new InexistentInputException(getAbsoluteFileName(filename));
 		}
 
 		node.setType(NodeType.INITIAL);
-		node.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, "input-" + (inputCounter++), this.getAbsoluteDirectory() + "/" + filename));
+		node.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, "input-" + (inputCounter++), getAbsoluteFileName(filename)));
 
 		initials.add(node);
 	}
@@ -140,7 +140,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		outputFilenames.add(filename);
 
 		node.setType(NodeType.FINAL);
-		node.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, "output-" + (outputCounter++), this.getAbsoluteDirectory() + "/" + filename));
+		node.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, "output-" + (outputCounter++), getAbsoluteFileName(filename)));
 
 		finals.add(node);
 	}
@@ -174,6 +174,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	}
 
 	public String getAbsoluteFileName(String filename) {
+		if(filename.startsWith("/")) {
+			return filename;
+		}
+
 		return getAbsoluteDirectory() + "/" + filename;
 	}
 

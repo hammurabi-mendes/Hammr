@@ -9,7 +9,7 @@ JGRAPHFILE=jgrapht-jdk1.6.jar
 BINDIRS=$BASEDIR/Client/bin:$BASEDIR/Common/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 LIBDIR=$BASEDIR/lib
 
-export COMMONLOC="file://${LIBDIR}/"
+export COMMONLOC="file://${LIBDIR}/Common.jar"
 
 export CLASSPATH=$BINDIRS:$LIBDIR/$JGRAPHFILE
 
@@ -32,17 +32,17 @@ Clean() {
 RunManager() {
 	echo "Running manager: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR &
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR $@ &
 }
 
 RunLauncher() {
 	echo "Running launcher: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC &
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
 }
 
 RunClient() {
 	echo "Running client: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC &
+	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
 }
 
 Kill() {
