@@ -80,7 +80,7 @@ public abstract class Mapper<O,V> extends Node {
 
 	protected void finalizeMapping() {
 		if(combiner != null) {
-			Set<Map.Entry<O,V>> currentEntries = combiner.getCurrentValues();
+			Set<Map.Entry<O,V>> currentEntries = combiner.getCurrentEntries();
 
 			for(Map.Entry<O,V> currentEntry: currentEntries) {
 				O object = currentEntry.getKey();

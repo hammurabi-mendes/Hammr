@@ -1,6 +1,11 @@
 package utilities.counting;
 
+import java.io.BufferedReader;
+
 import java.io.IOException;
+
+import java.util.Set;
+import java.util.HashSet;
 
 import utilities.InputGenerator;
 
@@ -12,8 +17,22 @@ public class CountingInputGenerator extends InputGenerator {
 		super(input, output);
 	}
 
-	protected ChannelElement generateInput(String line) {
-		return new MRChannelElement<String,Long>(line, 0L);
+	protected String obtainBuffer(BufferedReader reader) throws IOException {
+		return reader.readLine();
+	}
+
+	protected Set<ChannelElement> generateInput(String buffer) {
+		Set<ChannelElement> result = new HashSet<ChannelElement>();
+
+		String delimiters = "[^\\w]+";
+
+		String[] words = buffer.split(delimiters);
+
+		for(String word: words) {
+			result.add(new MRChannelElement<String,Long>(word.toLowerCase(), 0L));
+		}
+
+		return result;
 	}
 
 	public static void main(String[] arguments) {

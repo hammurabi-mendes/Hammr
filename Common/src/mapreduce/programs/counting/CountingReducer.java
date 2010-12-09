@@ -1,7 +1,13 @@
 package mapreduce.programs.counting;
 
-import java.util.Set;
+import java.util.Collections;
+import java.util.Comparator;
+
 import java.util.Map;
+import java.util.Map.Entry;
+
+import java.util.List;
+import java.util.ArrayList;
 
 import mapreduce.communication.MRChannelElement;
 
@@ -21,7 +27,9 @@ public class CountingReducer<O> extends Reducer<O,Long> {
 	}
 
 	public void finalizeReduce() {
-		Set<Map.Entry<O,Long>> currentEntries = combiner.getCurrentValues();
+		List<Map.Entry<O,Long>> currentEntries = new ArrayList<Map.Entry<O,Long>>(combiner.getCurrentEntries());
+
+		Collections.sort(currentEntries, new CountingEntryComparator<O>());
 
 		for(Map.Entry<O,Long> currentEntry: currentEntries) {
 			O object = currentEntry.getKey();
@@ -29,5 +37,11 @@ public class CountingReducer<O> extends Reducer<O,Long> {
 
 			writeSomeone(new MRChannelElement<O,Long>(object, value));
 		}
+	}
+}
+
+class CountingEntryComparator<O> implements Comparator<Map.Entry<O,Long>> {
+	public int compare(Entry<O, Long> first, Entry<O, Long> second) {
+		return first.getValue().compareTo(second.getValue());
 	}
 }

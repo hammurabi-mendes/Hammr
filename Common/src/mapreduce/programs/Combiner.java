@@ -28,8 +28,16 @@ public abstract class Combiner<O,V> {
 
 		currentValues.put(object, updatedValue);
 	}
+	
+	public V get(O object) {
+		return currentValues.get(object);
+	}
 
-	public Set<Map.Entry<O,V>> getCurrentValues() {
+	public Set<O> getCurrentObjects() {
+		return currentValues.keySet();
+	}
+	
+	public Set<Map.Entry<O,V>> getCurrentEntries() {
 		return currentValues.entrySet();
 	}
 

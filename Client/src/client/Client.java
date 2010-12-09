@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import mapreduce.appspecs.MapReduceSpecification;
 import mapreduce.programs.counting.CountingMapper;
 import mapreduce.programs.counting.CountingReducer;
+import mapreduce.programs.counting.CountingMerger;
 
 import interfaces.Manager;
 
@@ -13,7 +14,6 @@ import appspecs.EdgeType;
 import appspecs.Node;
 
 import programs.ReaderSomeoneWriterSomeone;
-import programs.ReaderSomeoneWriterEveryone;
 
 import appspecs.exceptions.InexistentInputException;
 import appspecs.exceptions.OverlappingOutputException;
@@ -277,7 +277,7 @@ public class Client {
 		}
 
 		try {
-			mapReduceSpecification.insertReducers("output-merger.dat", new ReaderSomeoneWriterEveryone(), nodesStage2);
+			mapReduceSpecification.insertReducers("output-merger.dat", new CountingMerger<String>(), nodesStage2);
 		} catch (OverlappingOutputException exception) {
 			System.err.println(exception);
 

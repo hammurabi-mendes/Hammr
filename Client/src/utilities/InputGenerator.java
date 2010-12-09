@@ -5,6 +5,9 @@ import java.io.FileReader;
 
 import java.io.IOException;
 
+import java.util.Set;
+import java.util.HashSet;
+
 import communication.ChannelElement;
 
 import communication.FileChannelElementWriter;
@@ -23,23 +26,35 @@ public class InputGenerator {
 
 		FileChannelElementWriter writer = new FileChannelElementWriter(output);
 
-		String line;
+		String buffer;
 
 		while(true) {
-			line = reader.readLine();
+			buffer = obtainBuffer(reader);
 
-			if(line == null) {
+			if(buffer == null) {
 				break;
 			}
 
-			writer.write(generateInput(line));
+			Set<ChannelElement> channelElements = generateInput(buffer);
+
+			for(ChannelElement channelElement: channelElements) {
+				writer.write(channelElement);
+			}
 		}
 
 		writer.close();
 	}
 
-	protected ChannelElement generateInput(String line) {
-		return new ChannelElement(line, null);
+	protected String obtainBuffer(BufferedReader reader) throws IOException {
+		return reader.readLine();
+	}
+
+	protected Set<ChannelElement> generateInput(String buffer) {
+		Set<ChannelElement> result = new HashSet<ChannelElement>();
+
+		result.add(new ChannelElement(buffer, null));
+
+		return result;
 	}
 
 	public static void main(String[] arguments) {
