@@ -271,7 +271,7 @@ public class ExecutionHandler extends Thread {
 		}
 
 		public void run() {
-			System.out.println("Excecuting " + node);
+			System.out.println("Executing " + node);
 
 			ThreadMXBean profiler = ManagementFactory.getThreadMXBean();
 

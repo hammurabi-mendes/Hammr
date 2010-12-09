@@ -1,12 +1,13 @@
 package mapreduce.programs;
 
-import java.util.Collections;
 import java.util.Comparator;
 
 import java.util.Set;
 
-import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+
+import java.util.PriorityQueue;
 
 import mapreduce.communication.MRChannelElement;
 
@@ -19,27 +20,37 @@ public abstract class Merger<O,V> extends Node {
 	public void run() {
 		Set<String> inputs = getInputChannelNames();
 
-		while(true) {
-			List<MRChannelElement<O,V>> channelElements = new ArrayList<MRChannelElement<O,V>>();
+		PriorityQueue<MRChannelElement<O,V>> channelElements = new PriorityQueue<MRChannelElement<O,V>>(inputs.size(), getComparator());
 
-			MRChannelElement<O,V> channelElement;
+		Map<MRChannelElement<O,V>,String> backwardMapping = new HashMap<MRChannelElement<O,V>,String>();
 
-			for(String input: inputs) {
-				channelElement = (MRChannelElement<O,V>) read(input);
+		MRChannelElement<O,V> channelElement;
 
-				if(channelElement != null) {
-					channelElements.add(channelElement);
-				}
+		for(String input: inputs) {
+			channelElement = (MRChannelElement<O,V>) read(input);
+
+			if(channelElement != null) {
+				channelElements.add(channelElement);
+
+				backwardMapping.put(channelElement, input);
 			}
+		}
 
-			if(channelElements.size() == 0) {
-				break;
-			}
+		while(channelElements.size() > 0) {
+			channelElement = channelElements.poll();
 
-			Collections.sort(channelElements, getComparator());
+			writeSomeone(channelElement);
 
-			for(MRChannelElement<O,V> currentChannelElement: channelElements) {
-				writeSomeone(currentChannelElement);
+			String input = backwardMapping.get(channelElement);
+
+			backwardMapping.remove(channelElement);
+
+			channelElement = (MRChannelElement<O,V>) read(input);
+
+			if(channelElement != null) {
+				channelElements.add(channelElement);
+
+				backwardMapping.put(channelElement, input);
 			}
 		}
 
