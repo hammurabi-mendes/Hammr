@@ -19,6 +19,7 @@ public class FileChannelElementWriter implements ChannelElementWriter {
 
 	public synchronized boolean flush() throws IOException {
 		channelElementOutputStream.flush();
+		channelElementOutputStream.reset();
 
 		return true;
 	}

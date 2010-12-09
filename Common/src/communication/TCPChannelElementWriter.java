@@ -45,6 +45,7 @@ public class TCPChannelElementWriter implements ChannelElementWriter {
 
 	public boolean flush() throws IOException {
 		objectOutputStream.flush();
+		objectOutputStream.reset();
 
 		return true;
 	}
