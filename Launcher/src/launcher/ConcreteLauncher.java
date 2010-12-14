@@ -76,7 +76,7 @@ public class ConcreteLauncher implements Launcher {
 		try {
 			concreteLauncher = new ConcreteLauncher(registryLocation);
 
-			RMIHelper.exportAndRegisterRemoteObject(registryLocation, concreteLauncher.getId(), concreteLauncher);
+			RMIHelper.exportRemoteObject(concreteLauncher);
 		} catch (RemoteException exception) {
 			System.err.println("Unable to contact manager");
 

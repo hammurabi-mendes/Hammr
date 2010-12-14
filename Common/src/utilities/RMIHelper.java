@@ -10,6 +10,19 @@ import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
 
 public class RMIHelper {
+	public static void exportRemoteObject(Remote object) {
+		if(System.getSecurityManager() == null) {
+			System.setSecurityManager(new RMISecurityManager());
+		}
+
+		try {
+			UnicastRemoteObject.exportObject(object, 0);
+		} catch (Exception exception) {
+			System.err.println("Error exporting or registering object: " + exception.toString());
+			exception.printStackTrace();
+		}
+	}
+
 	public static void exportAndRegisterRemoteObject(String name, Remote object) {
 		exportAndRegisterRemoteObject(null, name, object);
 	}
@@ -21,8 +34,6 @@ public class RMIHelper {
 
 		try {
 			Remote stub = UnicastRemoteObject.exportObject(object, 0);
-
-			// TODO: Can use an argument "host" to getRegistry
 
 			Registry registry = LocateRegistry.getRegistry(registerLocation);
 			registry.rebind(name, stub);
@@ -42,8 +53,6 @@ public class RMIHelper {
 		}
 
 		try {
-			// TODO: Can use an argument "host" to getRegistry
-
 			Registry registry = LocateRegistry.getRegistry(registerLocation);
 
 			Remote stub = registry.lookup(name);

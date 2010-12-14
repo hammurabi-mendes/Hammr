@@ -3,22 +3,20 @@ package communication;
 import java.net.Socket;
 import java.net.InetSocketAddress;
 
-import java.io.ObjectOutputStream;
-
 import java.io.IOException;
 
 public class TCPChannelElementWriter implements ChannelElementWriter {
 	private String name;
-	private ObjectOutputStream objectOutputStream;
+	private ChannelElementOutputStream channelElementOutputStream;
 
 	public TCPChannelElementWriter(String name, InetSocketAddress socketAddress) throws IOException {
 		this.name = name;
 
 		Socket socket = new Socket(socketAddress.getAddress(), socketAddress.getPort());
 
-		this.objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+		this.channelElementOutputStream = new ChannelElementOutputStream(socket.getOutputStream());
 
-		objectOutputStream.writeObject(name);
+		channelElementOutputStream.writeObject(name);
 	}
 
 	public String getName() {
@@ -29,31 +27,23 @@ public class TCPChannelElementWriter implements ChannelElementWriter {
 		this.name = name;
 	}
 
-	public ObjectOutputStream getObjectOutputStream() {
-		return objectOutputStream;
-	}
-
-	public void setObjectOutputStream(ObjectOutputStream objectOutputStream) {
-		this.objectOutputStream = objectOutputStream;
-	}
-
 	public boolean write(ChannelElement channelElement) throws IOException {
-		objectOutputStream.writeObject(channelElement);
+		channelElementOutputStream.writeChannelElement(channelElement);
 
 		return true;
 	}
 
 	public boolean flush() throws IOException {
-		objectOutputStream.flush();
-		objectOutputStream.reset();
+		channelElementOutputStream.flush();
+		channelElementOutputStream.reset();
 
 		return true;
 	}
 
 	public boolean close() throws IOException {
-		objectOutputStream.flush();
+		channelElementOutputStream.flush();
 
-		objectOutputStream.close();
+		channelElementOutputStream.close();
 
 		return true;
 	}

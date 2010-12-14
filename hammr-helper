@@ -4,12 +4,13 @@ BASEDIR=`pwd`
 
 REGISTRYLOC=localhost
 
-JGRAPHFILE=jgrapht-jdk1.6.jar
+COMMONFILE="Common.jar"
+JGRAPHFILE="jgrapht-jdk1.6.jar"
 
 BINDIRS=$BASEDIR/Client/bin:$BASEDIR/Common/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 LIBDIR=$BASEDIR/lib
 
-export COMMONLOC="file://${LIBDIR}/Common.jar"
+export CODEBASE="file://${LIBDIR}/${COMMONFILE}"
 
 export CLASSPATH=$BINDIRS:$LIBDIR/$JGRAPHFILE
 
@@ -18,7 +19,7 @@ Compile() {
 	ant -buildfile $BASEDIR/Client/build.xml   && \
 	ant -buildfile $BASEDIR/Manager/build.xml  && \
 	ant -buildfile $BASEDIR/Launcher/build.xml && \
-	jar cvf $LIBDIR/Common.jar -C Common/bin .
+	jar cvf $LIBDIR/${COMMONFILE} -C Common/bin .
 }
 
 Clean() {
@@ -26,23 +27,29 @@ Clean() {
 	ant -buildfile $BASEDIR/Client/build.xml clean
 	ant -buildfile $BASEDIR/Manager/build.xml clean
 	ant -buildfile $BASEDIR/Launcher/build.xml clean
-	rm -f $LIBDIR/Common.jar
+	rm -f $LIBDIR/${COMMONFILE}
 }
 
 RunManager() {
-	echo "Running manager: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
+	REGISTRYLOC=$1; shift;
+
+	echo "Running manager: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR $@ &
+	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR $@ &
 }
 
 RunLauncher() {
-	echo "Running launcher: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
+	REGISTRYLOC=$1; shift;
+
+	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
+	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
 }
 
 RunClient() {
-	echo "Running client: codebase=${COMMONLOC} and registry=${REGISTRYLOC}"
-	java -Djava.rmi.server.codebase=$COMMONLOC -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
+	REGISTRYLOC=$1; shift;
+
+	echo "Running client: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
+	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
 }
 
 Kill() {
@@ -51,9 +58,7 @@ Kill() {
 	ps ax | grep ConcreteLauncher | grep -v grep | cut -d ' ' -f 2 | xargs kill
 }
 
-COMMAND=$1
-
-shift
+COMMAND=$1; shift;
 
 case "${COMMAND}" in
     classpath)    echo $CLASSPATH ;;
