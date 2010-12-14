@@ -297,7 +297,13 @@ public class ConcreteScheduler implements Scheduler {
 
 		scheduledNodeGroups = new HashMap<Long, NodeGroup>();
 
+		long graphParsingStartTimer = System.currentTimeMillis();
+
 		createNodeGroupBundleDependencies();
+
+		long graphParsingEndingTimer = System.currentTimeMillis();
+
+		System.out.println("Time to parse graph for application " + applicationSpecification.getName() + ": " + (graphParsingEndingTimer - graphParsingStartTimer) + " msec");
 
 		return true;
 	}

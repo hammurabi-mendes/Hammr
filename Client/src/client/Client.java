@@ -1,5 +1,7 @@
 package client;
 
+import java.util.Random;
+
 import java.util.Set;
 
 import java.util.List;
@@ -119,7 +121,6 @@ public class Client {
 
 				System.exit(1);
 			}
-			//System.exit(1);
 		}
 
 		Node[] nodesStage2 = new Node[1];
@@ -142,7 +143,6 @@ public class Client {
 			}
 		}
 
-		// Change here
 		applicationSpecification.insertEdges(nodesStage1, nodesStage2, edgeType, -1);
 
 		applicationSpecification.finalize();
@@ -157,7 +157,7 @@ public class Client {
 		}
 	}
 
-	public void performTest3() {
+	public void performTest3(int numberNodesEdges) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test3", "/Users/hmendes/brown/DC/Project");
@@ -168,71 +168,48 @@ public class Client {
 			System.exit(1);
 		}
 
-		String inputFilename;
+		Node[] nodes = new Node[numberNodesEdges];
 
-		Node[] nodesStage1 = new Node[1];
-
-		for(int i = 0; i < nodesStage1.length; i++) {
-			nodesStage1[i] = new ReaderSomeoneWriterSomeone();
+		for(int i = 0; i < nodes.length; i++) {
+			nodes[i] = new TrivialNode();
 		}
 
-		applicationSpecification.insertNodes(nodesStage1);
+		applicationSpecification.insertNodes(nodes);
 
-		for(int i = 0; i < nodesStage1.length; i++) {
-			inputFilename = "input-stage1-" + i + ".dat";
-
-			try {
-				applicationSpecification.addInitial(nodesStage1[i], inputFilename);
-			} catch (InexistentInputException exception) {
-				System.err.println(exception);
-
-				System.exit(1);
-			}
-			//System.exit(1);
-		}
-
-		Node[] nodesStage2 = new Node[2];
-
-		for(int i = 0; i < nodesStage2.length; i++) {
-			nodesStage2[i] = new ReaderSomeoneWriterSomeone();
-		}
-
-		applicationSpecification.insertNodes(nodesStage2);
-
-		Node[] nodesStage3 = new Node[2];
-
-		for(int i = 0; i < nodesStage3.length; i++) {
-			nodesStage3[i] = new ReaderSomeoneWriterSomeone();
-		}
-
-		applicationSpecification.insertNodes(nodesStage3);
-
-		Node[] nodesStage4 = new Node[4];
-
-		for(int i = 0; i < nodesStage4.length; i++) {
-			nodesStage4[i] = new ReaderSomeoneWriterSomeone();
-		}
-
-		applicationSpecification.insertNodes(nodesStage4);
-
-		Node[] nodesStage5 = new Node[1];
-
-		nodesStage5[0] = new ReaderSomeoneWriterSomeone();
-
-		applicationSpecification.insertNodes(nodesStage5);
+		String inputFilename = "fake-input.dat";
 
 		try {
-			applicationSpecification.addFinal(nodesStage5[0], "output-stage5-0.dat");
-		} catch (OverlappingOutputException exception) {
+			applicationSpecification.addInitial(nodes[0], inputFilename);
+		} catch (InexistentInputException exception) {
 			System.err.println(exception);
 
 			System.exit(1);
 		}
 
-		applicationSpecification.insertEdges(nodesStage1, nodesStage2, EdgeType.TCP);
-		applicationSpecification.insertEdges(nodesStage2, nodesStage3, EdgeType.TCP, 1);
-		applicationSpecification.insertEdges(nodesStage3, nodesStage4, EdgeType.TCP);
-		applicationSpecification.insertEdges(nodesStage4, nodesStage5, EdgeType.TCP);
+		Random random = new Random();
+
+		int dice;
+
+		Node[] source = new Node[1];
+		Node[] target = new Node[1];
+
+		int numberEdges = 0;
+
+		for(int i = 0; i < nodes.length; i++) {
+			for(int j = i + 1; j < nodes.length; j++) {
+				dice = random.nextInt() % 1000;
+
+				if(dice <= 0) {
+					source[0] = nodes[i];
+					target[0] = nodes[j];
+
+					applicationSpecification.insertEdges(source, target, EdgeType.TCP);
+					numberEdges++;
+				}
+			}
+		}
+
+		System.out.println("Edges created: " + numberEdges);
 
 		applicationSpecification.finalize();
 
@@ -255,9 +232,41 @@ public class Client {
 
 		String registryLocation = arguments[0];
 
-		MRClient client = new MRClient(registryLocation);
-
 		String command = arguments[1];
+
+		if(command.equals("test1")) {
+			Client client = new Client(registryLocation);
+
+			client.performTest1();
+
+			System.exit(0);
+		}
+
+		if(command.equals("test2")) {
+			Client client = new Client(registryLocation);
+
+			client.performTest2(EdgeType.TCP);
+
+			System.exit(0);
+		}
+
+		if(command.equals("test3")) {
+			if(arguments.length <= 2) {
+				System.err.println("Usage: Client <registry_location> test3 <number_nodes_edges>");
+
+				System.exit(1);
+			}
+
+			Client client = new Client(registryLocation);
+
+			int numberNodesEdges = Integer.parseInt(arguments[2]);
+
+			client.performTest3(numberNodesEdges);
+
+			System.exit(0);
+		}
+
+		MRClient client = new MRClient(registryLocation);
 
 		if(command.equals("split_input")) {
 			if(arguments.length <= 3) {

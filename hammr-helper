@@ -10,7 +10,7 @@ JGRAPHFILE="jgrapht-jdk1.6.jar"
 BINDIRS=$BASEDIR/Client/bin:$BASEDIR/Common/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 LIBDIR=$BASEDIR/lib
 
-export CODEBASE="file://${LIBDIR}/${COMMONFILE}"
+export CODEBASE="file://${BASEDIR}/Common/bin/"
 
 export CLASSPATH=$BINDIRS:$LIBDIR/$JGRAPHFILE
 
@@ -18,8 +18,7 @@ Compile() {
 	ant -buildfile $BASEDIR/Common/build.xml   && \
 	ant -buildfile $BASEDIR/Client/build.xml   && \
 	ant -buildfile $BASEDIR/Manager/build.xml  && \
-	ant -buildfile $BASEDIR/Launcher/build.xml && \
-	jar cvf $LIBDIR/${COMMONFILE} -C Common/bin .
+	ant -buildfile $BASEDIR/Launcher/build.xml
 }
 
 Clean() {
@@ -27,7 +26,6 @@ Clean() {
 	ant -buildfile $BASEDIR/Client/build.xml clean
 	ant -buildfile $BASEDIR/Manager/build.xml clean
 	ant -buildfile $BASEDIR/Launcher/build.xml clean
-	rm -f $LIBDIR/${COMMONFILE}
 }
 
 RunManager() {
