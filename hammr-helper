@@ -10,6 +10,9 @@ JGRAPHFILE="jgrapht-jdk1.6.jar"
 BINDIRS=$BASEDIR/Client/bin:$BASEDIR/Common/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 LIBDIR=$BASEDIR/lib
 
+# We are memory hungry! Reserve heap space for the JVM
+HEAPPARAMS="-XX:-UseGCOverheadLimit -Xms2500M -Xmx2500M"
+
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
 export CLASSPATH=$BINDIRS:$LIBDIR/$JGRAPHFILE
@@ -33,21 +36,21 @@ RunManager() {
 
 	echo "Running manager: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $BASEDIR $@ &
 }
 
 RunLauncher() {
 	REGISTRYLOC=$1; shift;
 
 	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
 }
 
 RunClient() {
 	REGISTRYLOC=$1; shift;
 
 	echo "Running client: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
 }
 
 Kill() {
