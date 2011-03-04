@@ -24,4 +24,8 @@ public class FileChannelElementReader implements ChannelElementReader {
 
 		return null;
 	}
+
+	public void close() throws IOException {
+		channelElementInputStream.close();
+	}
 }

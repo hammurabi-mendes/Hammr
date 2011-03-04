@@ -16,59 +16,81 @@ public abstract class OutputExtractor {
 	private String[] inputs;
 	private String[] outputs;
 
-	public OutputExtractor(String[] inputOutputPairs) {
-		if((inputOutputPairs.length % 2) != 0) {
-			System.err.println("Parameters: [(<input> <output>) ... (<input> <output>)]");
+	public OutputExtractor(String[] inputsOutputs) {
+		List<String> inputList = new ArrayList<String>();
+		List<String> outputList = new ArrayList<String>();
+
+		boolean foundColum = false;
+
+		for(int i = 0; i < inputsOutputs.length; i++) {
+			if(inputsOutputs[i].equals(":")) {
+				foundColum = true;
+
+				continue;
+			}
+
+			if(!foundColum) {
+				inputList.add(inputsOutputs[i]);
+			}
+			else {
+				outputList.add(inputsOutputs[i]);
+			}
+		}	
+
+		if(inputList.size() == 0 || outputList.size() == 0) {
+			System.err.println("Parameters: <input> ... <input> : <output> ... <output>");
 
 			System.exit(1);
 		}
 
-		List<String> inputList = new ArrayList<String>();
-		List<String> outputList = new ArrayList<String>();
+		if(inputList.size() != outputList.size()) {
+			System.err.println("The specified inputs and outputs should have the same size");
 
-		for(int i = 0; i < inputOutputPairs.length; i++) {
-			if((i % 2) == 0) {
-				inputList.add(inputOutputPairs[i]);
-			}
-			else {
-				outputList.add(inputOutputPairs[i]);
-			}
-		}	
+			System.exit(1);
+		}
 
 		this.inputs = inputList.toArray(new String[inputList.size()]);
 		this.outputs = outputList.toArray(new String[outputList.size()]);
 	}
 
 	public OutputExtractor(String[] inputs, String[] outputs) {
-		if(inputs.length != outputs.length) {
-			System.err.println("The size of inputs and outputs must be the same");
-
-			throw new IllegalStateException();
-		}
-
 		this.inputs = inputs;
 		this.outputs = outputs;
 	}
 
 	public void run() throws IOException {
+		FileChannelElementReader[] readers = new FileChannelElementReader[inputs.length];
+
 		for(int i = 0; i < inputs.length; i++) {
-			FileChannelElementReader reader = new FileChannelElementReader(inputs[i]);
+			readers[i] = new FileChannelElementReader(inputs[i]);
+		}
 
-			BufferedWriter writer = new BufferedWriter(new FileWriter(outputs[i % outputs.length], true));
+		BufferedWriter[] writers = new BufferedWriter[outputs.length];
 
+		for(int i = 0; i < outputs.length; i++) {
+			writers[i] = new BufferedWriter(new FileWriter(outputs[i], true));
+		}
+
+		for(int i = 0; i < readers.length; i++) {
 			ChannelElement channelElement;
 
 			while(true) {
 				try {
-					channelElement = reader.read();
+					channelElement = readers[i].read();
 				} catch(EOFException exception) {
 					break;
 				}
 
-				writer.write(obtainInformation(channelElement));
+				writers[i].write(obtainInformation(channelElement));
 			}
+		}
 
-			writer.close();
+		for(int i = 0; i < readers.length; i++) {
+			readers[i].close();
+		}
+
+		for(int i = 0; i < writers.length; i++) {
+			writers[i].close();
 		}
 	}
 

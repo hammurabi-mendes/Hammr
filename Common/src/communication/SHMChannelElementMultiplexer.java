@@ -73,4 +73,10 @@ public class SHMChannelElementMultiplexer implements ChannelElementReader {
 			System.err.println("Error deleting origin " + origin + " for SHM channel multiplexer");
 		}
 	}
+
+	public void close() throws IOException {
+		System.err.println("Closing without specifying the input is not permitted");
+
+		throw new IOException();
+	}
 }

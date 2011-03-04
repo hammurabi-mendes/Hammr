@@ -16,50 +16,62 @@ public abstract class InputGenerator {
 	private String[] inputs;
 	private String[] outputs;
 
-	public InputGenerator(String[] inputOutputPairs) {
-		if((inputOutputPairs.length % 2) != 0) {
-			System.err.println("Parameters: [(<input> <output>) ... (<input> <output>)]");
-
-			System.exit(1);
-		}
-
+	public InputGenerator(String[] inputsOutputs) {
 		List<String> inputList = new ArrayList<String>();
 		List<String> outputList = new ArrayList<String>();
 
-		for(int i = 0; i < inputOutputPairs.length; i++) {
-			if((i % 2) == 0) {
-				inputList.add(inputOutputPairs[i]);
+		boolean foundColum = false;
+
+		for(int i = 0; i < inputsOutputs.length; i++) {
+			if(inputsOutputs[i].equals(":")) {
+				foundColum = true;
+
+				continue;
+			}
+
+			if(!foundColum) {
+				inputList.add(inputsOutputs[i]);
 			}
 			else {
-				outputList.add(inputOutputPairs[i]);
+				outputList.add(inputsOutputs[i]);
 			}
 		}	
+
+		if(inputList.size() == 0 || outputList.size() == 0) {
+			System.err.println("Parameters: <input> ... <input> : <output> ... <output>");
+
+			System.exit(1);
+		}
 
 		this.inputs = inputList.toArray(new String[inputList.size()]);
 		this.outputs = outputList.toArray(new String[outputList.size()]);
 	}
 
 	public InputGenerator(String[] inputs, String[] outputs) {
-		if(inputs.length != outputs.length) {
-			System.err.println("The size of inputs and outputs must be the same");
-
-			throw new IllegalStateException();
-		}
-
 		this.inputs = inputs;
 		this.outputs = outputs;
 	}
 
 	public void run() throws IOException {
+		BufferedReader[] readers = new BufferedReader[inputs.length];
+		
+		for(int i = 0; i < inputs.length; i++) {
+			readers[i] = new BufferedReader(new FileReader(inputs[i]));
+		}
+		
+		FileChannelElementWriter[] writers = new FileChannelElementWriter[outputs.length];
+		
 		for(int i = 0; i < outputs.length; i++) {
-			BufferedReader reader = new BufferedReader(new FileReader(inputs[i % inputs.length]));
-
-			FileChannelElementWriter writer = new FileChannelElementWriter(outputs[i]);
-
+			writers[i] =  new FileChannelElementWriter(outputs[i]);
+		}
+		
+		int writerCount = 0;
+		
+		for(int i = 0; i < readers.length; i++) {
 			String buffer;
 
 			while(true) {
-				buffer = obtainBuffer(reader);
+				buffer = obtainBuffer(readers[i]);
 
 				if(buffer == null) {
 					break;
@@ -68,11 +80,17 @@ public abstract class InputGenerator {
 				Set<ChannelElement> channelElements = generateInput(buffer);
 
 				for(ChannelElement channelElement: channelElements) {
-					writer.write(channelElement);
+					writers[(writerCount++) % writers.length].write(channelElement);
 				}
 			}
+		}
 
-			writer.close();
+		for(int i = 0; i < readers.length; i++) {
+			readers[i].close();
+		}
+		
+		for(int i = 0; i < writers.length; i++) {
+			writers[i].close();
 		}
 	}
 

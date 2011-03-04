@@ -64,12 +64,12 @@ RunClient() {
 
 RunGenInput() {
 	echo "Running the input generator"
-	java -cp $CLASSPATH $HEAPPARAMS utilities.counting.CountingInputGenerator $@ &
+	java -cp $CLASSPATH $HEAPPARAMS utilities.counting.CountingInputGenerator $@
 }
 
 RunGenOutput() {
 	echo "Running the output extractor"
-	java -cp $CLASSPATH $HEAPPARAMS utilities.counting.CountingOutputExtractor $@ &
+	java -cp $CLASSPATH $HEAPPARAMS utilities.counting.CountingOutputExtractor $@
 }
 
 Kill() {
