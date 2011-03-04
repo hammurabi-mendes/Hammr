@@ -1,13 +1,9 @@
 package client;
 
-import java.util.Set;
-import java.util.HashSet;
-
 import java.rmi.RemoteException;
 
-import appspecs.ApplicationSpecification;
-
 import mapreduce.appspecs.MapReduceSpecification;
+
 import mapreduce.programs.counting.CountingMapper;
 import mapreduce.programs.counting.CountingReducer;
 import mapreduce.programs.counting.CountingMerger;
@@ -15,8 +11,6 @@ import mapreduce.programs.counting.CountingMerger;
 import interfaces.Manager;
 
 import appspecs.Node;
-
-import programs.ReaderSomeoneWriterSomeone;
 
 import appspecs.exceptions.InexistentInputException;
 import appspecs.exceptions.OverlappingOutputException;
@@ -34,62 +28,7 @@ public class MRClient {
 		this.baseDirectory = baseDirectory;
 	}
 
-	public Set<String> split(String inputFilename, int numberInputs) {
-		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
-
-		ApplicationSpecification applicationSpecification = new MapReduceSpecification("mapreduce", baseDirectory);
-
-		if(!applicationSpecification.initialize()) {
-			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
-
-			System.exit(1);
-		}
-
-		Node[] nodesStage1 = new Node[1];
-
-		for(int i = 0; i < nodesStage1.length; i++) {
-			nodesStage1[i] = new ReaderSomeoneWriterSomeone();
-		}
-
-		applicationSpecification.insertNodes(nodesStage1);
-
-		try {
-			applicationSpecification.addInitial(nodesStage1[0], inputFilename);
-		} catch (InexistentInputException exception) {
-			System.err.println(exception);
-
-			System.exit(1);
-		}
-
-		Set<String> result = new HashSet<String>();
-
-		for(int i = 0; i < numberInputs; i++) {
-			String outputFilename = "datasplit-" + i + ".dat";
-
-			try {
-				applicationSpecification.addFinal(nodesStage1[0], outputFilename);
-			} catch (OverlappingOutputException exception) {
-				System.err.println(exception);
-
-				System.exit(1);
-			}
-
-			result.add(outputFilename);
-		}
-
-		try {
-			manager.registerApplication(applicationSpecification);
-		} catch (RemoteException exception) {
-			System.err.println("Unable to contact manager");
-			exception.printStackTrace();
-
-			System.exit(1);
-		}
-
-		return result;
-	}
-
-	public void performMapReduce(String[] inputFilenames, MapReduceSpecification.Type edgeType) {
+	public void performMapReduce(String[] inputFilenames, MapReduceSpecification.Type edgeType, boolean finalMerge) {
 		int numberMappers;
 		int numberReducers;
 
@@ -126,7 +65,20 @@ public class MRClient {
 		}
 
 		try {
-			mapReduceSpecification.insertReducers("output-merger.dat", new CountingMerger<String>(), nodesStage2);
+			if(finalMerge) {
+				mapReduceSpecification.insertReducers("output-merger.dat", new CountingMerger<String>(), nodesStage2);
+			}
+			else {
+				// Append a ".out" extension to the input filenames to form the output filenames
+
+				String[] outputFilenames = new String[numberReducers];
+
+				for(int i = 0; i < inputFilenames.length; i++) {
+					outputFilenames[i] = inputFilenames[i] + ".out";
+				}
+
+				mapReduceSpecification.insertReducers(outputFilenames, nodesStage2);
+			}
 		} catch (OverlappingOutputException exception) {
 			System.err.println(exception);
 

@@ -59,7 +59,7 @@ RunLauncher() {
 
 RunClient() {
 	echo "Running client: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $RUNNINGDIR $@ &
 }
 
 RunGenInput() {

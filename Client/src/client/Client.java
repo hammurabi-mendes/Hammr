@@ -271,25 +271,53 @@ public class Client {
 		}
 
 		if(command.equals("perform_mapreduce")) {
-			if(arguments.length <= 4) {
-				System.err.println("Usage: Client <registry_location> <base_directory> perform_mapreduce <type> [<input_filename> ... <input_filename>]");
+			if(arguments.length <= 5) {
+				System.err.println("Usage: Client <registry_location> <base_directory> perform_mapreduce <type> <join> [<input_filename> ... <input_filename>]");
+				System.err.println("<type>: \"TCP\" or \"FILE\"");
+				System.err.println("<join> \"true\" or \"false\"");
 
 				System.exit(1);
 			}
 
 			MRClient client = new MRClient(registryLocation, baseDirectory);
 
-			MapReduceSpecification.Type type = (arguments[3].equals("TCP") ? MapReduceSpecification.Type.TCPBASED : MapReduceSpecification.Type.FILEBASED);
+			MapReduceSpecification.Type type = MapReduceSpecification.Type.FILEBASED;
+
+			if(arguments[3].equals("TCP")) {
+				type = MapReduceSpecification.Type.TCPBASED;
+			}
+			else if(arguments[3].equals("FILE")) {
+				type = MapReduceSpecification.Type.FILEBASED;
+			}
+			else {
+				System.err.println("<type>: \"TCP\" or \"FILE\"");
+
+				System.exit(1);
+			}
+
+			boolean join = false;
+
+			if(arguments[4].equals("true")) {
+				join = true;
+			}
+			else if(arguments[4].equals("false")) {
+				join = false;
+			}
+			else {
+				System.err.println("<join> \"true\" or \"false\"");
+
+				System.exit(1);
+			}
 
 			List<String> temporaryInputFilenames = new ArrayList<String>();
 
-			for(int i = 4; i < arguments.length; i++) {
+			for(int i = 5; i < arguments.length; i++) {
 				temporaryInputFilenames.add(arguments[i]);
 			}
 
 			String[] finalInputFilenames = temporaryInputFilenames.toArray(new String[temporaryInputFilenames.size()]);
 
-			client.performMapReduce(finalInputFilenames, type);
+			client.performMapReduce(finalInputFilenames, type, join);
 		}
 	}
 }
