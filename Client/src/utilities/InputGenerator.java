@@ -1,77 +1,82 @@
 package utilities;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 
 import java.io.IOException;
 
-import java.util.Set;
-import java.util.HashSet;
-
 import communication.ChannelElement;
-
 import communication.FileChannelElementWriter;
 
-public class InputGenerator {
-	private String input;
-	private String output;
+public abstract class InputGenerator {
+	private String[] inputs;
+	private String[] outputs;
 
-	public InputGenerator(String input, String output) {
-		this.input = input;
-		this.output = output;
-	}
-
-	public void run() throws IOException {
-		BufferedReader reader = new BufferedReader(new FileReader(input));
-
-		FileChannelElementWriter writer = new FileChannelElementWriter(output);
-
-		String buffer;
-
-		while(true) {
-			buffer = obtainBuffer(reader);
-
-			if(buffer == null) {
-				break;
-			}
-
-			Set<ChannelElement> channelElements = generateInput(buffer);
-
-			for(ChannelElement channelElement: channelElements) {
-				writer.write(channelElement);
-			}
-		}
-
-		writer.close();
-	}
-
-	protected String obtainBuffer(BufferedReader reader) throws IOException {
-		return reader.readLine();
-	}
-
-	protected Set<ChannelElement> generateInput(String buffer) {
-		Set<ChannelElement> result = new HashSet<ChannelElement>();
-
-		result.add(new ChannelElement(buffer, null));
-
-		return result;
-	}
-
-	public static void main(String[] arguments) {
-		if(arguments.length != 2) {
-			System.err.println("Please provide an input and an output filename.");
+	public InputGenerator(String[] inputOutputPairs) {
+		if((inputOutputPairs.length % 2) != 0) {
+			System.err.println("Parameters: [(<input> <output>) ... (<input> <output>)]");
 
 			System.exit(1);
 		}
 
-		InputGenerator generator = new InputGenerator(arguments[0], arguments[1]);
+		List<String> inputList = new ArrayList<String>();
+		List<String> outputList = new ArrayList<String>();
 
-		try {
-			generator.run();
-		} catch (IOException exception) {
-			System.err.println("Error generating input");
+		for(int i = 0; i < inputOutputPairs.length; i++) {
+			if((i % 2) == 0) {
+				inputList.add(inputOutputPairs[i]);
+			}
+			else {
+				outputList.add(inputOutputPairs[i]);
+			}
+		}	
 
-			exception.printStackTrace();
+		this.inputs = inputList.toArray(new String[inputList.size()]);
+		this.outputs = outputList.toArray(new String[outputList.size()]);
+	}
+
+	public InputGenerator(String[] inputs, String[] outputs) {
+		if(inputs.length != outputs.length) {
+			System.err.println("The size of inputs and outputs must be the same");
+
+			throw new IllegalStateException();
+		}
+
+		this.inputs = inputs;
+		this.outputs = outputs;
+	}
+
+	public void run() throws IOException {
+		for(int i = 0; i < outputs.length; i++) {
+			BufferedReader reader = new BufferedReader(new FileReader(inputs[i % inputs.length]));
+
+			FileChannelElementWriter writer = new FileChannelElementWriter(outputs[i]);
+
+			String buffer;
+
+			while(true) {
+				buffer = obtainBuffer(reader);
+
+				if(buffer == null) {
+					break;
+				}
+
+				Set<ChannelElement> channelElements = generateInput(buffer);
+
+				for(ChannelElement channelElement: channelElements) {
+					writer.write(channelElement);
+				}
+			}
+
+			writer.close();
 		}
 	}
+
+	protected abstract String obtainBuffer(BufferedReader reader) throws IOException;
+
+	protected abstract Set<ChannelElement> generateInput(String buffer);
 }

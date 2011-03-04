@@ -2,8 +2,6 @@ package client;
 
 import java.util.Random;
 
-import java.util.Set;
-
 import java.util.List;
 import java.util.ArrayList;
 
@@ -27,14 +25,18 @@ import utilities.RMIHelper;
 public class Client {
 	private String registryLocation;
 
-	public Client(String registryLocation) {
+	private String baseDirectory;
+
+	public Client(String registryLocation, String baseDirectory) {
 		this.registryLocation = registryLocation;
+
+		this.baseDirectory = baseDirectory;
 	}
 
 	public void performTest1() {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test1", "/Users/hmendes/brown/DC/Project");
+		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test1", baseDirectory);
 
 		if(!applicationSpecification.initialize()) {
 			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
@@ -92,7 +94,7 @@ public class Client {
 	public void performTest2(EdgeType edgeType) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", "/Users/hmendes/brown/DC/Project");
+		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", baseDirectory);
 
 		if(!applicationSpecification.initialize()) {
 			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
@@ -160,7 +162,7 @@ public class Client {
 	public void performTest3(int numberNodesEdges) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test3", "/Users/hmendes/brown/DC/Project");
+		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test3", baseDirectory);
 
 		if(!applicationSpecification.initialize()) {
 			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
@@ -224,18 +226,20 @@ public class Client {
 	}
 
 	public static void main(String[] arguments) {
-		if(arguments.length <= 1) {
-			System.err.println("Usage: Client <registry_location> <command> [<command_argument> ... <comand_argument>]");
+		if(arguments.length <= 2) {
+			System.err.println("Usage: Client <registry_location> <base_directory> <command> [<command_argument> ... <comand_argument>]");
 
 			System.exit(1);
 		}
 
 		String registryLocation = arguments[0];
 
-		String command = arguments[1];
+		String baseDirectory = arguments[1];
+
+		String command = arguments[2];
 
 		if(command.equals("test1")) {
-			Client client = new Client(registryLocation);
+			Client client = new Client(registryLocation, baseDirectory);
 
 			client.performTest1();
 
@@ -243,7 +247,7 @@ public class Client {
 		}
 
 		if(command.equals("test2")) {
-			Client client = new Client(registryLocation);
+			Client client = new Client(registryLocation, baseDirectory);
 
 			client.performTest2(EdgeType.TCP);
 
@@ -251,57 +255,41 @@ public class Client {
 		}
 
 		if(command.equals("test3")) {
-			if(arguments.length <= 2) {
-				System.err.println("Usage: Client <registry_location> test3 <number_nodes_edges>");
+			if(arguments.length <= 3) {
+				System.err.println("Usage: Client <registry_location> <base_directory> test3 <number_nodes_edges>");
 
 				System.exit(1);
 			}
 
-			Client client = new Client(registryLocation);
+			Client client = new Client(registryLocation, baseDirectory);
 
-			int numberNodesEdges = Integer.parseInt(arguments[2]);
+			int numberNodesEdges = Integer.parseInt(arguments[3]);
 
 			client.performTest3(numberNodesEdges);
 
 			System.exit(0);
 		}
 
-		MRClient client = new MRClient(registryLocation);
-
-		if(command.equals("split_input")) {
-			if(arguments.length <= 3) {
-				System.err.println("Usage: Client <registry_location> split_input <input_filename> <number_inputs>]");
-
-				System.exit(1);
-			}
-
-			String inputFilename = arguments[2];
-
-			int numberInputs = Integer.parseInt(arguments[3]);
-
-			Set<String> filenames = client.split(inputFilename, numberInputs);
-
-			for(String filename: filenames) {
-				System.out.println(filename);
-			}
-		}
-
 		if(command.equals("perform_mapreduce")) {
-			if(arguments.length <= 2) {
-				System.err.println("Usage: Client <registry_location> perform_mapreduce [<input_filename> ... <input_filename>]");
+			if(arguments.length <= 4) {
+				System.err.println("Usage: Client <registry_location> <base_directory> perform_mapreduce <type> [<input_filename> ... <input_filename>]");
 
 				System.exit(1);
 			}
 
-			List<String> inputFilenames = new ArrayList<String>();
+			MRClient client = new MRClient(registryLocation, baseDirectory);
 
-			for(int i = 2; i < arguments.length; i++) {
-				inputFilenames.add(arguments[i]);
+			MapReduceSpecification.Type type = (arguments[3].equals("TCP") ? MapReduceSpecification.Type.TCPBASED : MapReduceSpecification.Type.FILEBASED);
+
+			List<String> temporaryInputFilenames = new ArrayList<String>();
+
+			for(int i = 4; i < arguments.length; i++) {
+				temporaryInputFilenames.add(arguments[i]);
 			}
 
-			String[] finalInputFilenames = inputFilenames.toArray(new String[inputFilenames.size()]);
+			String[] finalInputFilenames = temporaryInputFilenames.toArray(new String[temporaryInputFilenames.size()]);
 
-			client.performMapReduce(finalInputFilenames, MapReduceSpecification.Type.TCPBASED);
+			client.performMapReduce(finalInputFilenames, type);
 		}
 	}
 }

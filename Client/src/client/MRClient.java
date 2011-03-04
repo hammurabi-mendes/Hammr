@@ -26,14 +26,18 @@ import utilities.RMIHelper;
 public class MRClient {
 	private String registryLocation;
 
-	public MRClient(String registryLocation) {
+	private String baseDirectory;
+
+	public MRClient(String registryLocation, String baseDirectory) {
 		this.registryLocation = registryLocation;
+
+		this.baseDirectory = baseDirectory;
 	}
 
 	public Set<String> split(String inputFilename, int numberInputs) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		ApplicationSpecification applicationSpecification = new MapReduceSpecification("mapreduce", "/Users/hmendes/brown/DC/Project");
+		ApplicationSpecification applicationSpecification = new MapReduceSpecification("mapreduce", baseDirectory);
 
 		if(!applicationSpecification.initialize()) {
 			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
@@ -93,7 +97,7 @@ public class MRClient {
 
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		MapReduceSpecification mapReduceSpecification = new MapReduceSpecification("mapreduce", "/Users/hmendes/brown/DC/Project");
+		MapReduceSpecification mapReduceSpecification = new MapReduceSpecification("mapreduce", baseDirectory);
 
 		if(!mapReduceSpecification.initialize()) {
 			System.err.println("The directory " + mapReduceSpecification.getAbsoluteDirectory() + " does not exist");

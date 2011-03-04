@@ -13,8 +13,12 @@ import communication.ChannelElement;
 import mapreduce.communication.MRChannelElement;
 
 public class CountingInputGenerator extends InputGenerator {
-	public CountingInputGenerator(String input, String output) {
-		super(input, output);
+	public CountingInputGenerator(String[] inputOutputPairs) {
+		super(inputOutputPairs);
+	}
+
+	public CountingInputGenerator(String[] inputs, String[] outputs) {
+		super(inputs, outputs);
 	}
 
 	protected String obtainBuffer(BufferedReader reader) throws IOException {
@@ -36,13 +40,7 @@ public class CountingInputGenerator extends InputGenerator {
 	}
 
 	public static void main(String[] arguments) {
-		if(arguments.length != 2) {
-			System.err.println("Please provide an input and an output filename.");
-
-			System.exit(1);
-		}
-
-		CountingInputGenerator generator = new CountingInputGenerator(arguments[0], arguments[1]);
+		CountingInputGenerator generator = new CountingInputGenerator(arguments);
 
 		try {
 			generator.run();

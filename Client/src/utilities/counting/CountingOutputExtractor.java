@@ -8,11 +8,15 @@ import communication.ChannelElement;
 import mapreduce.communication.MRChannelElement;
 
 public class CountingOutputExtractor extends OutputExtractor {
-	public CountingOutputExtractor(String input, String output) {
-		super(input, output);
+	public CountingOutputExtractor(String[] inputOutputPairs) {
+		super(inputOutputPairs);
 	}
 
-	protected String generateOutput(ChannelElement genericChannelElement) {
+	public CountingOutputExtractor(String[] inputs, String[] outputs) {
+		super(inputs, outputs);
+	}
+
+	protected String obtainInformation(ChannelElement genericChannelElement) {
 		@SuppressWarnings("unchecked")
 		MRChannelElement<String,Long> channelElement = (MRChannelElement<String,Long>) genericChannelElement;
 
@@ -20,18 +24,12 @@ public class CountingOutputExtractor extends OutputExtractor {
 	}
 
 	public static void main(String[] arguments) {
-		if(arguments.length != 2) {
-			System.err.println("Please provide an input and an output filename.");
-
-			System.exit(1);
-		}
-
-		CountingOutputExtractor extractor = new CountingOutputExtractor(arguments[0], arguments[1]);
+		CountingOutputExtractor extractor = new CountingOutputExtractor(arguments);
 
 		try {
 			extractor.run();
 		} catch (IOException exception) {
-			System.err.println("Error extracting output");
+			System.err.println("Error generating input");
 
 			exception.printStackTrace();
 		}
