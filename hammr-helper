@@ -74,8 +74,8 @@ RunGenOutput() {
 
 Kill() {
 	killall -9 rmiregistry 2>/dev/null
-	ps ax -o pid= | grep ConcreteManager | grep -v grep | xargs kill 2>/dev/null
-	ps ax -o pid= | grep ConcreteLauncher | grep -v grep | xargs kill 2>/dev/null
+	ps ax -o pid= | grep ConcreteManager | grep -v grep | xargs kill -9 2>/dev/null
+	ps ax -o pid= | grep ConcreteLauncher | grep -v grep | xargs kill -9 2>/dev/null
 }
 
 COMMAND=$1; shift;
