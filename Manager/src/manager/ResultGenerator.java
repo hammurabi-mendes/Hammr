@@ -8,6 +8,11 @@ import java.util.Set;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
 
+/**
+ * Generates a summary for the whole application execution, in a separate thread.
+ * 
+ * @author Hammurabi Mendes (hmendes)
+ */
 public class ResultGenerator extends Thread {
 	private String baseDirectory;
 
@@ -15,8 +20,18 @@ public class ResultGenerator extends Thread {
 
 	private long runningTime;
 
+	// Result summaries received for the NodeGroups of this application
+	
 	private Set<ResultSummary> resultSummaries;
 
+	/**
+	 * Constructor method.
+	 * 
+	 * @param baseDirectory Directory where the report will be generated.
+	 * @param application Name of the application being summarized.
+	 * @param runningTime Application running time (real).
+	 * @param resultSummaries Result summaries received in the application execution.
+	 */
 	public ResultGenerator(String baseDirectory, String application, long runningTime, Set<ResultSummary> resultSummaries) {
 		this.baseDirectory = baseDirectory;
 
@@ -27,6 +42,13 @@ public class ResultGenerator extends Thread {
 		this.resultSummaries = resultSummaries;
 	}
 
+	/**
+	 * Generates the report, containing:
+	 * 	     1) Individual Node running times (real/CPU/user);
+	 *       2) Individual NodeGroup running time (real);
+	 *       3) Average Node running time (real/CPU/user);
+	 *       4) Average NodeGroup running time (real).
+	 */
 	public void run() {
 		String completeFilename = baseDirectory + "/" + application + ".dat";
 
@@ -90,6 +112,13 @@ public class ResultGenerator extends Thread {
 		}
 	}
 
+	/**
+	 * Converts a epoch-based time into a human-readable form.
+	 * 
+	 * @param time Epoch-based time long.
+	 * 
+	 * @return An human-readable form of the informed time.
+	 */
 	private String getHumanReadableTime(long time) {
 		long units[] = new long[] {0, 0, 0, 0, 0};
 

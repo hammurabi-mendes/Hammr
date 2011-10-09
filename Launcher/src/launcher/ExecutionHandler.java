@@ -37,6 +37,11 @@ import interfaces.Manager;
 
 import exceptions.InexistentApplicationException;
 
+/**
+ * This class is responsible for running a specific NodeGroup previously submitted to the Launcher.
+ * 
+ * @author Hammurabi Mendes (hmendes)
+ */
 public class ExecutionHandler extends Thread {
 	private Manager manager;
 
@@ -44,6 +49,13 @@ public class ExecutionHandler extends Thread {
 
 	private NodeGroup nodeGroup;
 
+	/**
+	 * Constructor.
+	 * 
+	 * @param manager Reference to the manager.
+	 * @param concreteLauncher Reference to the local launcher.
+	 * @param nodeGroup NodeGroup that should be run.
+	 */
 	public ExecutionHandler(Manager manager, ConcreteLauncher concreteLauncher, NodeGroup nodeGroup) {
 		this.manager = manager;
 
@@ -52,15 +64,30 @@ public class ExecutionHandler extends Thread {
 		this.nodeGroup = nodeGroup;
 	}
 
+	/**
+	 * Setter for the NodeGroup that should be run.
+	 * 
+	 * @param nodeGroup NodeGroup that should be run.
+	 */
 	public void setNodeGroup(NodeGroup nodeGroup) {
 		this.nodeGroup = nodeGroup;
 	}
 
+	/**
+	 * Getter for the NodeGroup that should be run.
+	 * 
+	 * @return NodeGroup that should be run.
+	 */
 	public NodeGroup getNodeGroup() {
 		return nodeGroup;
 	}
 
+	/**
+	 * Runs the NodeGroup in separate threads, one thread for each Node.
+	 */
 	public void run() {
+		// Stores runtime information; sent back to the master
+		// at the end of the execution.
 		ResultSummary resultSummary;
 
 		try {
@@ -77,11 +104,21 @@ public class ExecutionHandler extends Thread {
 			return;
 		}
 
-		resultSummary = startExecution();
+		resultSummary = performExecution();
 
 		finishExecution(resultSummary);
 	}
 
+	/**
+	 * Creates the communication channels for the NodeGroup being run.
+	 * If it has a server-side TCP channel, it notifies the master about the obtained socket address.
+	 * If it has a client-side TCP channel, it obtains from the master the associated socket address.
+	 * 
+	 * @throws Exception If one of the following situations occur:
+	 *         1) Error creating client-side or server-side TCP channels;
+	 *         2) The address of a server-side TCP channel required by this NodeGroup is not located at the master;
+	 *         3) Error creating or opening file channels.
+	 */
 	private void setupCommunication() throws Exception {
 		// Create all the pipe handlers
 		// If two pipe edges target the same node, only one pipe handler (and corresponding physical pipe) will be created
@@ -202,7 +239,12 @@ public class ExecutionHandler extends Thread {
 		}
 	}
 
-	private ResultSummary startExecution() {
+	/**
+	 * Performs the execution of the Nodes, one per thread, and prepares the result summary to send back to the master.
+	 * 
+	 * @return Result summary to send back to the master.
+	 */
+	private ResultSummary performExecution() {
 		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.size()];
 
 		Iterator<Node> iterator = nodeGroup.iterator();
@@ -239,6 +281,13 @@ public class ExecutionHandler extends Thread {
 		return resultSummary;
 	}
 
+	/**
+	 * Sends the result summary of the NodeGroup back to the master, and clears the NodeGroup data from the launcher.
+	 * 
+	 * @param resultSummary Result summary obtained after the NodeGroup was executed.
+	 * 
+	 * @return True if the master was properly notified; false otherwise.
+	 */
 	private boolean finishExecution(ResultSummary resultSummary) {
 		concreteLauncher.delNodeGroup(nodeGroup);
 
@@ -254,6 +303,11 @@ public class ExecutionHandler extends Thread {
 		return true;
 	}
 
+	/**
+	 * Class that executes a single Node in a separate thread, performing the appopriate measurements.
+	 * 
+	 * @author Hammurabi Mendes (hmendes)
+	 */
 	class NodeHandler extends Thread {
 		private Node node;
 
@@ -266,10 +320,18 @@ public class ExecutionHandler extends Thread {
 		private long userLocalTimerStart;
 		private long userLocalTimerFinish;
 
+		/**
+		 * Class constructor.
+		 * 
+		 * @param node Node to be run in a separate thread.
+		 */
 		public NodeHandler(Node node) {
 			this.node = node;
 		}
 
+		/**
+		 * Runs the Node in a separate thread of execution, and obtain runtime measurements.
+		 */
 		public void run() {
 			System.out.println("Executing " + node);
 
@@ -294,26 +356,51 @@ public class ExecutionHandler extends Thread {
 			userLocalTimerFinish = profiler.getCurrentThreadUserTime();
 		}
 
+		/**
+		 * Getter for the Node being run.
+		 * 
+		 * @return The node being run.
+		 */
 		public Node getNode() {
 			return node;
 		}
 
+		/**
+		 * Getter for the real time to execute the Node.
+		 * 
+		 * @return The real time to execute the Node.
+		 */
 		public long getRealTime() {
 			return realLocalTimerFinish - realLocalTimerStart;
 		}
 
+		/**
+		 * Getter for the CPU time to execute the Node.
+		 * 
+		 * @return The CPU time to execute the Node.
+		 */
 		public long getCpuTime() {
 			// We get results in milliseconds, not in nanoseconds
 			
 			return (cpuLocalTimerFinish - cpuLocalTimerStart) / 1000000;
 		}
 
+		/**
+		 * Getter for the user time to execute the Node.
+		 * 
+		 * @return The user time to execute the Node.
+		 */
 		public long getUserTime() {
 			// We get results in milliseconds, not in nanoseconds
 			
 			return (userLocalTimerFinish - userLocalTimerStart) / 1000000;
 		}
 
+		/**
+		 * Getter for the whole set of node measurements.
+		 * 
+		 * @return The whole set of node measurements.
+		 */
 		public NodeMeasurements getNodeMeasurements() {
 			return new NodeMeasurements(getRealTime(), getCpuTime(), getUserTime());
 		}

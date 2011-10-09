@@ -29,15 +29,27 @@ import scheduler.ConcreteScheduler;
 
 import utilities.RMIHelper;
 
+/**
+ * This class is a concrete implementation of a Manager.
+ * 
+ * @author Hammurabi Mendes (hmendes)
+ */
 public class ConcreteManager implements Manager {
 	private String baseDirectory;
 
+	// Active launchers, mapped by ID
 	private Map<String, Launcher> registeredLaunchers;
 
+	// Active applications, mapped by name
 	private Map<String, ApplicationInformationHolder> applicationInformationHolders;
 
 	private Random random;
 
+	/**
+	 * Constructor method.
+	 * 
+	 * @param baseDirectory The working directory of the manager.
+	 */
 	public ConcreteManager(String baseDirectory) {
 		this.baseDirectory = baseDirectory;
 
@@ -48,6 +60,13 @@ public class ConcreteManager implements Manager {
 		this.random = new Random();
 	}
 
+	/**
+	 * Notifies the manager a new launcher has been started. Called by Launchers.
+	 * 
+	 * @param launcher Started launcher.
+	 * 
+	 * @return True unless the launcher is not reachable.
+	 */
 	public boolean registerLauncher(Launcher launcher) {
 		String launcherId;
 
@@ -66,8 +85,21 @@ public class ConcreteManager implements Manager {
 		}
 	}
 
+	/**
+	 * Submits a new application. Called by clients.
+	 * 
+	 * @param applicationSpecification Specification of the application that should be run.
+	 * 
+	 * @return False unless:
+	 *         1) No running application has the same name;
+	 *         2) The scheduler setup for the application went fine;
+	 *         
+	 *         In these cases, the method returns true.
+	 */
 	public boolean registerApplication(ApplicationSpecification applicationSpecification) {
 		String applicationName = applicationSpecification.getName();
+
+		// Trying to register an application that's still running
 
 		if(applicationInformationHolders.containsKey(applicationName)) {
 			System.err.println("Application " + applicationName + " is still running!");
@@ -80,6 +112,8 @@ public class ConcreteManager implements Manager {
 		Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
 
 		try {
+			// Setup the scheduler, and try to schedule an initial wave of NodeGroups
+
 			if(!scheduler.setup(applicationSpecification)) {
 				System.err.println("Error setting up scheduler");
 
@@ -111,6 +145,17 @@ public class ConcreteManager implements Manager {
 		return true;
 	}
 
+	/**
+	 * Informs a server-side TCP channel socket address to the manager. This is called in the setup of NodeGroups that have
+	 * server-side TCP channels. This happens in the Launcher. The corresponding client-side TCP channels query the master for
+	 * this information.
+	 * 
+	 * @param application Name of the application.
+	 * @param name Name of the Node with a server-side TCP channel.
+	 * @param socketAddress Socket addrss of the server-side TCP channel.
+	 * 
+	 * @return True unless the map for the specific pair application/node already exists.
+	 */
 	public boolean insertSocketAddress(String application, String name, InetSocketAddress socketAddress) throws RemoteException {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
@@ -125,6 +170,16 @@ public class ConcreteManager implements Manager {
 		return true;
 	}
 
+	/**
+	 * Queries for the socket address for a server-side TCP channel. This is called in the setup of NodeGroups that have
+	 * client-side TCP channels. This happens in the Launcher. The corresponding server-side TCP channels inform their socket
+	 * address to the manager.
+	 * 
+	 * @param application Name of the application.
+	 * @param name Name of the Node with a server-side TCP channel.
+	 * 
+	 * @return The socket address associated with the requested TCP channel.
+	 */
 	public InetSocketAddress obtainSocketAddress(String application, String name) throws RemoteException {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
@@ -145,6 +200,13 @@ public class ConcreteManager implements Manager {
 		return applicationInformationHolder.getRegisteredSocketAddress(name);
 	}
 
+	/**
+	 * Notifies the master that a NodeGroup finished execution. This is called by the Launchers.
+	 * 
+	 * @param resultSummary Summary containing the runtime information regarding the executed NodeGroup.
+	 * 
+	 * @return True if the information was expected at the time this method is called; false otherwise.
+	 */
 	public boolean handleTermination(ResultSummary resultSummary) {
 		String application = resultSummary.getNodeGroupApplication();
 
@@ -190,6 +252,15 @@ public class ConcreteManager implements Manager {
 		}
 	}
 
+	/**
+	 * Creates a holder containing the application name, specification, and scheduler, and makes it
+	 * ready to start executing.
+	 * 
+	 * @param applicationName Name of the application.
+	 * @param applicationSpecification Application specification.
+	 * 
+	 * @return The newly created holder.
+	 */
 	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) {
 		ApplicationInformationHolder applicationInformationHolder = new ApplicationInformationHolder();
 
@@ -205,6 +276,14 @@ public class ConcreteManager implements Manager {
 		return applicationInformationHolder;
 	}
 
+	/**
+	 * Deletes the holder containing the application name, specification, and scheduler, effectively
+	 * finishing its execution.
+	 * 
+	 * @param applicationName Name of the application
+	 * 
+	 * @return True if the application was finished successfully; false otherwise.
+	 */
 	private synchronized boolean finishApplication(String applicationName) {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(applicationName);
 
@@ -223,6 +302,11 @@ public class ConcreteManager implements Manager {
 		return true;
 	}
 
+	/**
+	 * Obtain the first alive Launcher, selected randomly.
+	 * 
+	 * @return The first alive Launcher, selected randomly.
+	 */
 	public Launcher getRandomLauncher() {
 		ArrayList<Map.Entry<String,Launcher>> aliveLaunchers = new ArrayList<Map.Entry<String,Launcher>>();
 
@@ -251,12 +335,26 @@ public class ConcreteManager implements Manager {
 		return null;
 	}
 
+	/**
+	 * Generates a result containing a summary of the whole application execution.
+	 * 
+	 * @param application The application being summarized.
+	 * @param runningTime Application running time.
+	 * @param applicationResultSummaries Result summaries obtained for this application.
+	 */
 	private void processApplicationResultSummaries(String application, long runningTime, Set<ResultSummary> applicationResultSummaries) {
 		ResultGenerator resultGenerator = new ResultGenerator(baseDirectory, application, runningTime, applicationResultSummaries);
 
 		resultGenerator.start();
 	}
 
+	/**
+	 * Manager startup method.
+	 * 
+	 * @param arguments A list containing:
+	 *        1) The registry location;
+	 *        2) The manager working directory.
+	 */
 	public static void main(String[] arguments) {
 		if(arguments.length != 2) {
 			System.err.println("Usage: ConcreteManager <registry_location> <base_directory>");
@@ -265,6 +363,9 @@ public class ConcreteManager implements Manager {
 		}	
 
 		String registryLocation = arguments[0];
+
+		// Initiates a concrete manager and makes it available
+		// for remote method calls.
 
 		ConcreteManager concreteManager = new ConcreteManager(arguments[1]);
 

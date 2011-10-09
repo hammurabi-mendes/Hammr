@@ -35,20 +35,40 @@ public class ConcreteScheduler implements Scheduler {
 	private ConcreteManager concreteManager;
 	private ApplicationSpecification applicationSpecification;
 
+	// A NodeGroupBundle is only released when its NodeGroup dependencies are executed
+	
 	private DependencyManager<NodeGroup, NodeGroupBundle> dependencyManager;
 
+	// List of NodeGroups currently executin on Launchers
+	
 	private Map<Long, NodeGroup> scheduledNodeGroups;
 
 	private long serialNumberCounter = 1L;
 
+	/**
+	 * Constructor method.
+	 * 
+	 * @param concreteManager Reference to the manager object.
+	 */
 	public ConcreteScheduler(ConcreteManager concreteManager) {
 		this.concreteManager = concreteManager;
 	}
 
+	/**
+	 * Specifies the application that this scheduler is responsible by.
+	 * 
+	 * @param applicationSpecification The application this scheduler is responsible by.
+	 */
 	private void setApplicationSpecification(ApplicationSpecification applicationSpecification) {
 		this.applicationSpecification = applicationSpecification;
 	}
 
+	/**
+	 * Parses the graph and clusters Nodes that use shared memory as their communication primitive
+	 * into NodeGroups. Each NodeGroup is assigned a serial number.
+	 * 
+	 * @return A list of NodeGroups indexed by their serial number.
+	 */
 	private Map<MutableInteger, NodeGroup> getNodeGroups() {
 		Map<MutableInteger, NodeGroup> result = new HashMap<MutableInteger, NodeGroup>();
 
@@ -104,6 +124,12 @@ public class ConcreteScheduler implements Scheduler {
 		return result;
 	}
 
+	/**
+	 * Parses the graph formed when we consider NodeGroups as single nodes and cluster NodeGroups that use TCP channels
+	 * as their communication primitive into NodeGroupBundles. Each NodeGroupBundle is assigned a serial number.
+	 * 
+	 * @return A list of NodeGroups indexed by their serial number.
+	 */
 	private Map<MutableInteger, NodeGroupBundle> getNodeGroupBundles() {
 		Map<MutableInteger, NodeGroup> nodeGroups = getNodeGroups();
 
@@ -178,6 +204,12 @@ public class ConcreteScheduler implements Scheduler {
 	//       1) Verify whether all the initial node bundles are free (i.e., without dependencies)
 	//       2) Add all the free dependencies into the dependency manager
 	//       3) Guarantee that one file is read at most by one node
+	/**
+	 * Based on the NodeGroupBundles identified in the application specification, create dependencies that only release
+	 * NodeGroupBundles when all their triggerer NodeGroups have their execution notified to the scheduler.
+	 * @throws TemporalDependencyException
+	 * @throws CyclicDependencyException
+	 */
 	private void createNodeGroupBundleDependencies() throws TemporalDependencyException, CyclicDependencyException {
 		Map<MutableInteger, NodeGroupBundle> nodeGroupBundles = getNodeGroupBundles();
 
@@ -228,6 +260,14 @@ public class ConcreteScheduler implements Scheduler {
 		}
 	}
 
+	/**
+	 * Try to schedule the next wave of NodeGroups: NodeGroupBundles are NodeGroups that should
+	 * be schedule at the same time.
+	 * 
+	 * @return False if no NodeGroupBundle is available to execution; true otherwise.
+	 * 
+	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
+	 */
 	public synchronized boolean scheduleNodeGroupBundle() throws InsufficientLaunchersException {
 		if(!dependencyManager.hasFreeDependents()) {
 			return false;
@@ -246,6 +286,11 @@ public class ConcreteScheduler implements Scheduler {
 		return true;
 	}
 
+	/**
+	 * Try to schedule the informed NodeGroup.
+	 * 
+	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
+	 */
 	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
 		nodeGroup.prepareSchedule(serialNumberCounter++);
 
@@ -268,6 +313,13 @@ public class ConcreteScheduler implements Scheduler {
 		}	
 	}
 
+	/**
+	 * Obtains a random alive Launcher from the Manager.
+	 * 
+	 * @return A random alive Launcher.
+	 * 
+	 * @throws InsufficientLaunchersException If there are no alive Launchers.
+	 */
 	private Launcher getRandomLauncher() throws InsufficientLaunchersException {
 		Launcher launcher =  concreteManager.getRandomLauncher();
 
@@ -278,6 +330,14 @@ public class ConcreteScheduler implements Scheduler {
 		return launcher;
 	}
 
+	/**
+	 * Informs the scheduler a particular NodeGroup has finished its execution.
+	 * 
+	 * @param serialNumber The serial number of the NodeGroup that has finished its execution.
+	 * 
+	 * @return True if this is the first termination notification for this NodeGroup; false otherwise. The current
+	 * scheduler implementation only has one possible termination notification, since it doesn't handle failures.
+	 */
 	public synchronized boolean handleTermination(Long serialNumber) {
 		NodeGroup terminated = scheduledNodeGroups.remove(serialNumber);
 
@@ -290,6 +350,15 @@ public class ConcreteScheduler implements Scheduler {
 		return false;
 	}
 
+	/**
+	 * Setups the scheduler for the new application being executed.
+	 * @param applicationSpecification Application specification.
+	 * 
+	 * @return True if the setup finished successfully; false otherwise.
+	 * 
+	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
+	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
+	 */
 	public synchronized boolean setup(ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException {
 		setApplicationSpecification(applicationSpecification);
 
@@ -308,6 +377,11 @@ public class ConcreteScheduler implements Scheduler {
 		return true;
 	}
 
+	/**
+	 * Tests whether all the Node/NodeGroups were already executed.
+	 * 
+	 * @return True if all the Node/NodeGroups were already executed, false otherwise.
+	 */
 	public synchronized boolean finished() {
 		return (!dependencyManager.hasLockedDependents() && !dependencyManager.hasFreeDependents() && (scheduledNodeGroups.size() == 0));
 	}
