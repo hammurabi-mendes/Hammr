@@ -1,0 +1,43 @@
+set :hammr_home, "/home/ubuntu/Hammr"
+set :master, "ip-10-114-138-11.ec2.internal"
+
+role :master, "ip-10-114-138-11.ec2.internal"
+role :slaves, "domU-12-31-39-0E-81-12.compute-1.internal","ip-10-40-63-82.ec2.internal","ip-10-68-63-162.ec2.internal","ip-10-116-66-213.ec2.internal"
+
+task :start_master, :roles => :master do
+     run <<-CMD
+         #{hammr_home}/scripts/start_manager.sh --hammr_home #{hammr_home} --master_host #{master}
+     CMD
+end
+
+task :start_slaves, :roles => :slaves do
+     run <<-CMD
+         #{hammr_home}/scripts/start_launcher.sh --hammr_home #{hammr_home} --master_host #{master}
+     CMD
+end
+
+task :stop_master, :roles => :master do
+     run <<-CMD
+         #{hammr_home}/scripts/stop_manager.sh --hammr_home #{hammr_home}
+     CMD
+end
+
+task :stop_slaves, :roles => :slaves do
+     run <<-CMD
+         #{hammr_home}/scripts/stop_launcher.sh --hammr_home #{hammr_home}
+     CMD
+end
+
+task :start do
+     transaction do
+         start_master
+         start_slaves
+     end
+end
+
+task :stop do
+     transaction do
+         stop_master
+         stop_slaves
+     end
+end
