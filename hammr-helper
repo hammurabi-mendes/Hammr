@@ -17,7 +17,7 @@ HEAPPARAMS="-XX:-UseGCOverheadLimit -Xms2500M -Xmx2500M"
 
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
-export CLASSPATH=$BINDIRS:$JGRAPHFILE
+CLASSPATH=$BINDIRS:$JGRAPHFILE
 
 Compile() {
 	ant -buildfile $BASEDIR/Common/build.xml   && \
@@ -74,8 +74,8 @@ RunGenOutput() {
 
 Kill() {
 	killall -9 rmiregistry 2>/dev/null
-	ps ax -o pid= | grep ConcreteManager | grep -v grep | xargs kill -9 2>/dev/null
-	ps ax -o pid= | grep ConcreteLauncher | grep -v grep | xargs kill -9 2>/dev/null
+	ps ax -o pid,command | grep ConcreteManager | grep -v grep | xargs kill -9 2>/dev/null
+	ps ax -o pid,command | grep ConcreteLauncher | grep -v grep | xargs kill -9 2>/dev/null
 }
 
 COMMAND=$1; shift;
