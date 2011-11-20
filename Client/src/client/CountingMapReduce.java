@@ -71,11 +71,11 @@ public class CountingMapReduce {
 				System.exit(1);
 			}
 
-			MapReduceSpecification.CommunicationType tType = null;
+			MapReduceSpecification.Type tType = null;
 			if ("FILE".equalsIgnoreCase(type)) {
-				tType = MapReduceSpecification.CommunicationType.FILEBASED;
+				tType = MapReduceSpecification.Type.FILEBASED;
 			} else if ("TCP".equalsIgnoreCase(type)) {
-				tType = MapReduceSpecification.CommunicationType.TCPBASED;
+				tType = MapReduceSpecification.Type.TCPBASED;
 			} else {
 				System.err.println(String.format("Unrecognized Type: %s. Exit.", type));
 				System.exit(1);

@@ -94,6 +94,7 @@ public final class MapperNode<INKEY, INVALUE, OUTKEY extends Comparable<OUTKEY>,
 
 	public MapperNode(Mapper<INKEY, INVALUE, OUTKEY, OUTVALUE> mapper,
 			Reducer<OUTKEY, OUTVALUE, OUTKEY, OUTVALUE> combiner) {
+		super("default-mapper-name");
 		this.mapper = mapper;
 		this.combiner = combiner;
 	}

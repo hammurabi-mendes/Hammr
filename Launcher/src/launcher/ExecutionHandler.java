@@ -1,3 +1,14 @@
+/*
+Copyright (c) 2010, Hammurabi Mendes
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package launcher;
 
 import java.util.Iterator;
@@ -21,7 +32,8 @@ import utilities.DistributedFileSystemFactory;
 import utilities.Logging;
 
 import appspecs.Node;
-import appspecs.NodeType;
+
+import enums.CommunicationType;
 
 import execinfo.NodeGroup;
 import execinfo.OutputFileInfo;
@@ -136,13 +148,13 @@ public class ExecutionHandler extends Thread {
 	 */
 	private void setupCommunication() throws Exception {
 		// Create all the pipe handlers
-		// If two pipe edges target the same node, only one pipe handler (and corresponding physical pipe) will be created
+		// If two pipe edges target the same node, only one pipe handler (and
+		// corresponding physical pipe) will be created
 
 		Map<String, SHMChannelElementMultiplexer> mapChannelElementOutputStream = new HashMap<String, SHMChannelElementMultiplexer>();
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			SHMChannelElementMultiplexer shmChannelElementMultiplexer = null;
-
 			for (InputChannel channelHandler : node.getInputChannels()) {
 				if (channelHandler instanceof SHMInputChannel) {
 					SHMInputChannel shmChannelHandler = (SHMInputChannel) channelHandler;
@@ -161,7 +173,7 @@ public class ExecutionHandler extends Thread {
 			}
 		}
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			for (OutputChannel channelHandler : node.getOutputChannels()) {
 				if (channelHandler instanceof SHMOutputChannel) {
 					SHMOutputChannel shmChannelHandler = (SHMOutputChannel) channelHandler;
@@ -178,9 +190,10 @@ public class ExecutionHandler extends Thread {
 		}
 
 		// Create all the TCP handlers
-		// If two TCP edges target the same node, only one TCP handler (and corresponding server) will be created
+		// If two TCP edges target the same node, only one TCP handler (and
+		// corresponding server) will be created
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			TCPChannelElementMultiplexer tcpChannelElementMultiplexer = null;
 
 			for (InputChannel channelHandler : node.getInputChannels()) {
@@ -210,7 +223,7 @@ public class ExecutionHandler extends Thread {
 			}
 		}
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			for (OutputChannel channelHandler : node.getOutputChannels()) {
 				if (channelHandler instanceof TCPOutputChannel) {
 					TCPOutputChannel tcpChannelHandler = (TCPOutputChannel) channelHandler;
@@ -238,15 +251,11 @@ public class ExecutionHandler extends Thread {
 		}
 
 		// Create all the file handlers
-		// If more than one file edge target the same node, more than one file handler (and corresponding file descriptor) will be created
-
-		for(Node node: nodeGroup.getNodes()) {
+		// If more than one file edge target the same node, more than one file
+		// handler (and corresponding file descriptor) will be created
+		for (Node node : nodeGroup.getNodes()) {
 			for (InputChannel channelHandler : node.getInputChannels()) {
 				if (channelHandler instanceof DistributedFileInputChannel) {
-					/**
-					 * Note: DistributedFileInputChannel is hardcoded to contain binary ChannelElement
-					 * TODO: fix this
-					 */
 					DistributedFileInputChannel fileChannelHandler = (DistributedFileInputChannel) channelHandler;
 
 					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(
@@ -254,29 +263,12 @@ public class ExecutionHandler extends Thread {
 
 					fileChannelHandler.setChannelElementReader(fileChannelElementReader);
 				}
-				else if (channelHandler instanceof DistributedFileSplitInputChannel) {
-					/**
-					 * Note: DistributedFileSplitInputChannel is hardcoded to contain MRTextInputChannelElement
-					 * TODO: fix this
-					 */
-					DistributedFileSplitInputChannel inputfileSplitChannel = (DistributedFileSplitInputChannel) channelHandler;
-					MRTextInputChannelElementReader reader = new MRTextInputChannelElementReader(inputfileSplitChannel);
-					inputfileSplitChannel.setChannelElementReader(reader);
-				}
 			}
 
 			for (OutputChannel channelHandler : node.getOutputChannels()) {
 				if (channelHandler instanceof DistributedFileOutputChannel) {
 					DistributedFileOutputChannel fileChannelHandler = (DistributedFileOutputChannel) channelHandler;
-					/**
-					 * Note: output of final nodes are hardcoded to be text
-					 * format 
-					 * TODO: fix this
-					 */
-					AbstractChannelElementOutputStream oStream = node.getType() == NodeType.FINAL ? new ChannelElementTextOutputStream(
-							DistributedFileSystemFactory.getDistributedFileSystem()
-									.create(fileChannelHandler.getPath()))
-							: new ChannelElementOutputStream(DistributedFileSystemFactory.getDistributedFileSystem()
+					AbstractChannelElementOutputStream oStream = new ChannelElementOutputStream(DistributedFileSystemFactory.getDistributedFileSystem()
 									.create(fileChannelHandler.getPath()));
 
 					ChannelElementWriter channelElementWriter = new FileChannelElementWriter(oStream);
@@ -285,7 +277,17 @@ public class ExecutionHandler extends Thread {
 				}
 			}
 		}
-		
+
+		for (Node node : nodeGroup.getNodes()) {
+			for (InputChannel channel : node.getInputChannels()) {
+				if (channel instanceof DistributedFileSplitInputChannel) {
+					DistributedFileSplitInputChannel inputfileSplitChannel = (DistributedFileSplitInputChannel) channel;
+					MRTextInputChannelElementReader reader = new MRTextInputChannelElementReader(inputfileSplitChannel);
+					inputfileSplitChannel.setChannelElementReader(reader);
+				}
+			}
+		}
+
 		for (Node node : nodeGroup.getNodes()) {
 			/*
 			 * Don't create readersShuffler here. ReadersShuffler should be
@@ -294,7 +296,6 @@ public class ExecutionHandler extends Thread {
 			// node.createReadersShuffler();
 			node.createWritersShuffler();
 		}
-		
 	}
 
 	/**
@@ -304,19 +305,19 @@ public class ExecutionHandler extends Thread {
 	 */
 	private ResultSummary performExecution() {
 		Logging.Info("[ExecutionHandler][performExecution] ");
-		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.size()];
+		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.getSize()];
 
-		Iterator<Node> iterator = nodeGroup.iterator();
+		Iterator<Node> iterator = nodeGroup.getNodesIterator();
 
 		long globalTimerStart = System.currentTimeMillis();
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			nodeHandlers[i] = new NodeHandler(iterator.next());
 
 			nodeHandlers[i].start();
 		}
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			try {
 				nodeHandlers[i].join();
 			} catch (InterruptedException exception) {
@@ -333,7 +334,7 @@ public class ExecutionHandler extends Thread {
 
 		resultSummary.setNodeGroupTiming(globalTimerFinish - globalTimerStart);
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			resultSummary.addNodeMeasurements(nodeHandlers[i].getNode().getName(), nodeHandlers[i].getNodeMeasurements());
 		}
 
@@ -440,7 +441,7 @@ public class ExecutionHandler extends Thread {
 		 */
 		public long getCpuTime() {
 			// We get results in milliseconds, not in nanoseconds
-			
+
 			return (cpuLocalTimerFinish - cpuLocalTimerStart) / 1000000;
 		}
 
@@ -451,7 +452,7 @@ public class ExecutionHandler extends Thread {
 		 */
 		public long getUserTime() {
 			// We get results in milliseconds, not in nanoseconds
-			
+
 			return (userLocalTimerFinish - userLocalTimerStart) / 1000000;
 		}
 

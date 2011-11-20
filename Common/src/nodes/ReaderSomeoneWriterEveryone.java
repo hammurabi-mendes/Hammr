@@ -1,10 +1,10 @@
-package programs;
+package nodes;
 
 import appspecs.Node;
 
 import communication.channel.ChannelElement;
 
-public class ReaderSomeoneWriterSomeone extends Node {
+public class ReaderSomeoneWriterEveryone extends Node {
 	private static final long serialVersionUID = 1L;
 
 	public void run() {
@@ -17,7 +17,7 @@ public class ReaderSomeoneWriterSomeone extends Node {
 				break;
 			}
 
-			write(channelElement);
+			writeEveryone(channelElement);
 		}
 
 		flushAndCloseOutputs();

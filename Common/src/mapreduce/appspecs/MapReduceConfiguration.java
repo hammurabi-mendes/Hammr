@@ -1,6 +1,6 @@
 package mapreduce.appspecs;
 
-import mapreduce.appspecs.MapReduceSpecification.CommunicationType;
+import mapreduce.appspecs.MapReduceSpecification.Type;
 import mapreduce.programs.Reducer;
 
 import mapreduce.programs.Mapper;
@@ -18,7 +18,7 @@ public final class MapReduceConfiguration {
 	private String m_sUserPoolName = "anonymous";
 	private int m_nReducers;
 	private String m_sOutputFilenamePrefix = "part";
-	private MapReduceSpecification.CommunicationType m_communicationType = MapReduceSpecification.CommunicationType.FILEBASED;
+	private MapReduceSpecification.Type m_communicationType = MapReduceSpecification.Type.FILEBASED;
 	
 	private Class<? extends Mapper> m_cMapper = null;
 	private Class<? extends Reducer> m_cReducer = null;
@@ -77,7 +77,7 @@ public final class MapReduceConfiguration {
 		return m_sOutputFilenamePrefix;
 	}
 	
-	public MapReduceSpecification.CommunicationType getCommnicationType()
+	public MapReduceSpecification.Type getCommnicationType()
 	{
 		return m_communicationType;
 	}
@@ -106,7 +106,7 @@ public final class MapReduceConfiguration {
 		m_sOutputFilenamePrefix = outputfilenameprefix;
 	}
 
-	public void setCommunicationType(CommunicationType tType) {
+	public void setCommunicationType(Type tType) {
 		m_communicationType = tType;	
 	}
 

@@ -6,10 +6,10 @@ import java.util.List;
 import communication.writer.ChannelElementWriter;
 
 import appspecs.Node;
-import appspecs.exceptions.InexistentInputException;
-import appspecs.exceptions.OverlappingOutputException;
 
 import conf.Config;
+import exceptions.InexistentInputException;
+import exceptions.OverlapingFilesException;
 
 import mapreduce.appspecs.MapReduceSpecification;
 import mapreduce.appspecs.MapReduceConfiguration;
@@ -22,7 +22,7 @@ import mapreduce.programs.ReducerNode;
 
 public class ApplicationSpecFactory {
 	public static MapReduceSpecification getMapReduceApplicationSpecification(MapReduceConfiguration conf)
-			throws InstantiationException, IllegalAccessException, IOException, OverlappingOutputException, InexistentInputException {
+			throws InstantiationException, IllegalAccessException, IOException, InexistentInputException, OverlapingFilesException{
 
 		MapReduceSpecification spec = new MapReduceSpecification(conf.getJobName(), conf.getUserPoolName(), Config.DEFAULT_HDFS_BASEDIR);
 

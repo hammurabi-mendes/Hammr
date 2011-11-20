@@ -19,6 +19,7 @@ public final class ReducerNode<INKEY extends Comparable<INKEY>, INVALUE, OUTKEY 
 	private final Reducer<INKEY, INVALUE, OUTKEY, OUTVALUE> reducer;
 
 	public ReducerNode(Reducer<INKEY, INVALUE, OUTKEY, OUTVALUE> reducer) {
+		super("default-reducer-name");
 		this.reducer = reducer;
 	}
 

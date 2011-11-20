@@ -1,3 +1,14 @@
+/*
+Copyright (c) 2010, Hammurabi Mendes
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 package scheduler;
 
 import java.util.Set;
@@ -14,7 +25,7 @@ import java.util.HashMap;
  * @param <X> Type of the first item.
  * @param <Y> Type of the second item.
  */
-public class DependencyManager<X, Y> {
+public class DependencyManager<X,Y> {
 	// Maps trigger -> Its own dependencies
 	private Map<X, Set<Y>> dependencies;
 
@@ -22,7 +33,7 @@ public class DependencyManager<X, Y> {
 	private Map<Y, Integer> lockedDependents;
 
 	// Dependents that don't have any present triggerer
-	private Set<Y> freeDependents;
+	private Set<Y> unlockedDependents;
 
 	/**
 	 * Constructor method.
@@ -32,7 +43,7 @@ public class DependencyManager<X, Y> {
 
 		lockedDependents = new HashMap<Y, Integer>();
 
-		freeDependents = new HashSet<Y>();
+		unlockedDependents = new HashSet<Y>();
 	}
 
 	/**
@@ -44,7 +55,7 @@ public class DependencyManager<X, Y> {
 	 */
 	public void insertDependency(X triggerer, Y dependent) {
 		if(triggerer == null) {
-			freeDependents.add(dependent);
+			unlockedDependents.add(dependent);
 
 			return;
 		}
@@ -93,8 +104,8 @@ public class DependencyManager<X, Y> {
 	 * 
 	 * @return True if some dependents don't have any present triggerer; false otherwise.
 	 */
-	public boolean hasFreeDependents() {
-		return (freeDependents.size() > 0);
+	public boolean hasUnlockedDependents() {
+		return (unlockedDependents.size() > 0);
 	}
 
 	/**
@@ -112,18 +123,18 @@ public class DependencyManager<X, Y> {
 	 * @return The dependents that don't have any present triggerer.
 	 */
 	public Set<Y> obtainFreeDependents() {
-		Set<Y> result = freeDependents;
+		Set<Y> result = unlockedDependents;
 
-		resetFreeDependents();
+		resetUnlockedDependents();
 
 		return result;
 	}
 
 	/**
-	 * Reset the list of free dependencies after some dependents are effectively released.
+	 * Reset the list of unlocked dependencies after some dependents are effectively released.
 	 */
-	public void resetFreeDependents() {
-		freeDependents = new HashSet<Y>();
+	public void resetUnlockedDependents() {
+		unlockedDependents = new HashSet<Y>();
 	}
 
 	/**
@@ -168,7 +179,7 @@ public class DependencyManager<X, Y> {
 			if(currentCounter <= 0) {
 				lockedDependents.remove(dependent);
 
-				freeDependents.add(dependent);
+				unlockedDependents.add(dependent);
 			}
 			else {
 				lockedDependents.put(dependent, currentCounter);

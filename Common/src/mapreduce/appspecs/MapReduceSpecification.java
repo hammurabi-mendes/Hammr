@@ -1,13 +1,24 @@
+/*
+Copyright (c) 2010, Hammurabi Mendes
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package mapreduce.appspecs;
 
 import utilities.DistributedFileSystemFactory;
 import mapreduce.programs.Mapper;
+import enums.CommunicationType;
+import exceptions.InexistentInputException;
+import exceptions.OverlapingFilesException;
 import appspecs.ApplicationSpecification;
 import appspecs.Node;
-import appspecs.EdgeType;
 
-import appspecs.exceptions.InexistentInputException;
-import appspecs.exceptions.OverlappingOutputException;
 
 public class MapReduceSpecification extends ApplicationSpecification {
 	private static final long serialVersionUID = 1L;
@@ -26,11 +37,11 @@ public class MapReduceSpecification extends ApplicationSpecification {
 	public void insertMappers(String input, Node splitter, Node[] mappers) throws InexistentInputException {
 		stageSplitter(splitter);
 
-		addInitial(splitter, input);
+		addInput(splitter, input);
 
 		stageMappers(mappers);
 
-		insertEdges(splitStage, mapStage, EdgeType.FILE);
+		insertEdges(splitStage, mapStage, CommunicationType.FILE);
 	}
 
 	public void insertMappers(String[] inputs, Node[] mappers) throws InexistentInputException {
@@ -43,7 +54,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 				long blocksize = DistributedFileSystemFactory.getDistributedFileSystem().getBlockSize(
 						getAbsoluteFileName(input));
 				for (long offset = 0; offset < length; offset += blocksize) {
-					addInitial(mappers[i++], input, offset, Math.min(offset + blocksize, length));
+					addInput(mappers[i++], input, offset, Math.min(offset + blocksize, length));
 				}
 			}
 		} catch (Exception e) {
@@ -61,36 +72,37 @@ public class MapReduceSpecification extends ApplicationSpecification {
 			int nMappers = mappers.length;
 			stageMappers(mappers);
 			for (int i = 0; i < nMappers; ++i) {
-				addInitial(mappers[i], input, i * blocksize, Math.min((i + 1) * blocksize, length));
+				addInput(mappers[i], input, i * blocksize, Math.min((i + 1) * blocksize, length));
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void insertReducers(String output, Node merger, Node[] reducers) throws OverlappingOutputException {
+	public void insertReducers(String output, Node merger, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		stageMerger(merger);
 
-		addFinal(mergeStage[0], output);
+		addOutput(mergeStage[0], output);
 
-		insertEdges(reduceStage, mergeStage, EdgeType.FILE);
+		insertEdges(reduceStage, mergeStage, CommunicationType.FILE);
 	}
 
-	public void insertReducers(String[] outputs, Node[] reducers) throws OverlappingOutputException {
+	public void insertReducers(String[] outputs, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		for (int i = 0; i < outputs.length; i++) {
-			addFinal(reducers[i], outputs[i]);
+			addOutput(reducers[i], outputs[i]);
 		}
 	}
 
-	public void setupCommunication(CommunicationType type) {
-		if (type == CommunicationType.TCPBASED) {
-			insertEdges(mapStage, reduceStage, EdgeType.TCP);
-		} else if (type == CommunicationType.FILEBASED) {
-			insertEdges(mapStage, reduceStage, EdgeType.FILE);
+	public void setupCommunication(Type type) throws OverlapingFilesException {
+		if(type == Type.TCPBASED) {
+			insertEdges(mapStage, reduceStage, CommunicationType.TCP);
+		}
+		else if(type == Type.FILEBASED) {
+			insertEdges(mapStage, reduceStage, CommunicationType.FILE);
 		}
 
 		finalize();
@@ -142,7 +154,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		nameGenerationCounter = 0L;
 	}
 
-	public enum CommunicationType {
+	public enum Type {
 		TCPBASED, FILEBASED;
 	}
 }

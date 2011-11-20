@@ -1,30 +1,48 @@
+/*
+Copyright (c) 2010, Hammurabi Mendes
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package scheduler;
 
 import java.rmi.RemoteException;
 
 import java.util.Set;
 import java.util.Map;
+import java.util.List;
 import java.util.Queue;
 
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 import org.jgrapht.alg.*;
 import org.jgrapht.graph.*;
 
+import enums.CommunicationType;
 import execinfo.NodeGroup;
 import execinfo.NodeGroupBundle;
+
+import exceptions.InexistentInputException;
+import exceptions.InexistentOutputException;
 
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
 
 import appspecs.ApplicationSpecification;
+import appspecs.Decider;
 import appspecs.Node;
 import appspecs.Edge;
-import appspecs.EdgeType;
 
+import utilities.FileHelper;
 import utilities.MutableInteger;
 
 import interfaces.Launcher;
@@ -35,12 +53,19 @@ public class ConcreteScheduler implements Scheduler {
 	private ConcreteManager concreteManager;
 	private ApplicationSpecification applicationSpecification;
 
+	/////////////////////////
+	// PARSING INFORMATION //
+	/////////////////////////
+
+	Map<MutableInteger, NodeGroup> nodeGroups;
+	Map<MutableInteger, NodeGroupBundle> nodeGroupBundles;
+
 	// A NodeGroupBundle is only released when its NodeGroup dependencies are executed
-	
+
 	private DependencyManager<NodeGroup, NodeGroupBundle> dependencyManager;
 
-	// List of NodeGroups currently executin on Launchers
-	
+	// List of NodeGroups currently executing on Launchers
+
 	private Map<Long, NodeGroup> scheduledNodeGroups;
 
 	private long serialNumberCounter = 1L;
@@ -55,12 +80,77 @@ public class ConcreteScheduler implements Scheduler {
 	}
 
 	/**
-	 * Specifies the application that this scheduler is responsible by.
+	 * Setups the scheduler for the new application being executed.
 	 * 
-	 * @param applicationSpecification The application this scheduler is responsible by.
+	 * @param applicationSpecification Application specification.
+	 * 
+	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
+	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
 	 */
-	private void setApplicationSpecification(ApplicationSpecification applicationSpecification) {
+	public synchronized void prepareApplicaiton(ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException {
+		// Initiate data structures
+
 		this.applicationSpecification = applicationSpecification;
+
+		this.dependencyManager = new DependencyManager<NodeGroup, NodeGroupBundle>();
+
+		this.scheduledNodeGroups = new HashMap<Long, NodeGroup>();
+
+		// Parse the application graph
+
+		long graphParsingStartTimer = System.currentTimeMillis();
+
+		Map<MutableInteger, NodeGroupBundle> nodeGroupBundles = getNodeGroupBundles();
+
+		long graphParsingEndingTimer = System.currentTimeMillis();
+
+		System.out.println("Time to parse graph for application " + applicationSpecification.getName() + ": " + (graphParsingEndingTimer - graphParsingStartTimer) + " msec");
+
+		// Display identified node group bundles
+
+		System.out.println("Identified node group bundles:");
+
+		for(NodeGroupBundle x: nodeGroupBundles.values()) {
+			System.out.println(x);
+		}
+
+		// Detect cyclic dependency problems
+
+		Node source, target;
+
+		DefaultDirectedGraph<NodeGroupBundle, DefaultEdge> nodeGroupBundleGraph = new DefaultDirectedGraph<NodeGroupBundle, DefaultEdge>(DefaultEdge.class);
+
+		for(NodeGroupBundle nodeGroupBundle: nodeGroupBundles.values()) {
+			nodeGroupBundleGraph.addVertex(nodeGroupBundle);
+		}
+
+		for(Edge edge: applicationSpecification.edgeSet()) {
+			if(edge.getCommunicationMode() == CommunicationType.FILE) {
+				source = edge.getSource();
+				target = edge.getTarget();
+
+				nodeGroupBundleGraph.addEdge(source.getNodeGroup().getNodeGroupBundle(), target.getNodeGroup().getNodeGroupBundle());
+			}
+		}
+
+		CycleDetector<NodeGroupBundle, DefaultEdge> cycleDetector = new CycleDetector<NodeGroupBundle, DefaultEdge>(nodeGroupBundleGraph);
+
+		if(cycleDetector.detectCycles()) {
+			throw new CyclicDependencyException();
+		}
+
+		// Detect temporal dependency problems
+
+		for(Edge edge: applicationSpecification.edgeSet()) {
+			if(edge.getCommunicationMode() == CommunicationType.FILE) {
+				source = edge.getSource();
+				target = edge.getTarget();
+
+				if(source.getNodeGroup().getNodeGroupBundle() == target.getNodeGroup().getNodeGroupBundle()) {
+					throw new TemporalDependencyException(source, target);
+				}
+			}
+		}
 	}
 
 	/**
@@ -70,6 +160,10 @@ public class ConcreteScheduler implements Scheduler {
 	 * @return A list of NodeGroups indexed by their serial number.
 	 */
 	private Map<MutableInteger, NodeGroup> getNodeGroups() {
+		if(nodeGroups != null) {
+			return nodeGroups;
+		}
+
 		Map<MutableInteger, NodeGroup> result = new HashMap<MutableInteger, NodeGroup>();
 
 		Queue<Node> queue = new LinkedList<Node>();
@@ -98,7 +192,7 @@ public class ConcreteScheduler implements Scheduler {
 				for(Edge connection: applicationSpecification.outgoingEdgesOf(current)) {
 					neighbor = connection.getTarget();
 
-					if(connection.getCommunicationMode() == EdgeType.SHM) {
+					if(connection.getCommunicationMode() == CommunicationType.SHM) {
 						if(!neighbor.isMarked()) {
 							neighbor.setMark(spammerIdentifier);
 							queue.add(neighbor);
@@ -109,7 +203,7 @@ public class ConcreteScheduler implements Scheduler {
 				for(Edge connection: applicationSpecification.incomingEdgesOf(current)) {
 					neighbor = connection.getSource();
 
-					if(connection.getCommunicationMode() == EdgeType.SHM) {
+					if(connection.getCommunicationMode() == CommunicationType.SHM) {
 						if(!neighbor.isMarked()) {
 							neighbor.setMark(spammerIdentifier);
 							queue.add(neighbor);
@@ -121,6 +215,7 @@ public class ConcreteScheduler implements Scheduler {
 			result.put(spammerIdentifier, new NodeGroup(applicationSpecification.getName(), spammerGroup));
 		}
 
+		nodeGroups = result;
 		return result;
 	}
 
@@ -131,6 +226,10 @@ public class ConcreteScheduler implements Scheduler {
 	 * @return A list of NodeGroups indexed by their serial number.
 	 */
 	private Map<MutableInteger, NodeGroupBundle> getNodeGroupBundles() {
+		if(nodeGroupBundles != null) {
+			return nodeGroupBundles;
+		}
+
 		Map<MutableInteger, NodeGroup> nodeGroups = getNodeGroups();
 
 		DefaultDirectedGraph<NodeGroup, DefaultEdge> nodeGroupGraph = new DefaultDirectedGraph<NodeGroup, DefaultEdge>(DefaultEdge.class);
@@ -142,7 +241,7 @@ public class ConcreteScheduler implements Scheduler {
 		Node source, target;
 
 		for(Edge edge: applicationSpecification.edgeSet()) {
-			if(edge.getCommunicationMode() == EdgeType.TCP) {
+			if(edge.getCommunicationMode() == CommunicationType.TCP) {
 				source = edge.getSource();
 				target = edge.getTarget();
 
@@ -197,67 +296,115 @@ public class ConcreteScheduler implements Scheduler {
 			result.put(spammerIdentifier, new NodeGroupBundle(spammerBundle));
 		}
 
+		nodeGroupBundles = result;
 		return result;
 	}
 
-	// TODO: Insert the following functionality
-	//       1) Verify whether all the initial node bundles are free (i.e., without dependencies)
-	//       2) Add all the free dependencies into the dependency manager
-	//       3) Guarantee that one file is read at most by one node
 	/**
-	 * Based on the NodeGroupBundles identified in the application specification, create dependencies that only release
-	 * NodeGroupBundles when all their triggerer NodeGroups have their execution notified to the scheduler.
-	 * @throws TemporalDependencyException
-	 * @throws CyclicDependencyException
+	 * Terminates the application .
 	 */
-	private void createNodeGroupBundleDependencies() throws TemporalDependencyException, CyclicDependencyException {
-		Map<MutableInteger, NodeGroupBundle> nodeGroupBundles = getNodeGroupBundles();
+	public synchronized void terminateApplication() {
+		// Do nothing special
+	}
 
-		System.out.println("Identified node group bundles:");
+	/**
+	 * Tests whether the application has finished.
+	 * 
+	 * @return True if the application has finished, false otherwise.
+	 */
+	public synchronized boolean finishedApplication() {
+		Decider decider = applicationSpecification.getDecider();
 
-		for(NodeGroupBundle x: nodeGroupBundles.values()) {
-			System.out.println(x);
+		if(decider == null) {
+			return true;
 		}
 
-		DefaultDirectedGraph<NodeGroupBundle, DefaultEdge> nodeGroupBundleGraph = new DefaultDirectedGraph<NodeGroupBundle, DefaultEdge>(DefaultEdge.class);
+		decider.setAggregatedVariables(null);
+		decider.setApplicationSpecification(applicationSpecification);
 
-		for(NodeGroupBundle nodeGroupBundle: nodeGroupBundles.values()) {
-			nodeGroupBundleGraph.addVertex(nodeGroupBundle);
-		}
+		return decider.hasAnotherIteration();
+	}
 
-		Node source, target;
+	/**
+	 * Prepare an iteration for the application.
+	 * 
+	 * @throws InexistentInputException If one of the inputs are missing.
+	 */
+	public synchronized void prepareIteration() throws InexistentInputException {
+		// Check if all the inputs are present
 
-		for(Edge edge: applicationSpecification.edgeSet()) {
-			if(edge.getCommunicationMode() == EdgeType.FILE) {
-				source = edge.getSource();
-				target = edge.getTarget();
+		List<String> missingInputs = new ArrayList<String>();;
 
-				nodeGroupBundleGraph.addEdge(source.getNodeGroup().getNodeGroupBundle(), target.getNodeGroup().getNodeGroupBundle());
+		for(String input: applicationSpecification.getInputFilenames()) {
+			if(!FileHelper.exists(input)) {
+				missingInputs.add(input);
 			}
 		}
 
-		CycleDetector<NodeGroupBundle, DefaultEdge> cycleDetector = new CycleDetector<NodeGroupBundle, DefaultEdge>(nodeGroupBundleGraph);
-
-		if(cycleDetector.detectCycles()) {
-			throw new CyclicDependencyException();
+		if(missingInputs.size() != 0) {
+			throw new InexistentInputException(missingInputs);
 		}
 
-		for(Node node: applicationSpecification.getInitials()) {
-			dependencyManager.insertDependency(null, node.getNodeGroup().getNodeGroupBundle());
-		}
+		// Find out the initial nodes: the nodes that only have input file dependencies
+
+		Node source, target;
+
+		Set<Node> initials = new HashSet<Node>(applicationSpecification.getFileConsumers());
 
 		for(Edge edge: applicationSpecification.edgeSet()) {
-			if(edge.getCommunicationMode() == EdgeType.FILE) {
+			target = edge.getTarget();
+
+			if(initials.contains(target)) {
+				initials.remove(target);
+			}
+		}
+
+		// Notify the dependency manager that the initial nodes should be immediately available to schedule
+
+		for(Node initial: initials) {
+			dependencyManager.insertDependency(null, initial.getNodeGroup().getNodeGroupBundle());
+		}
+
+		// Notify the other dependencies for the dependency manager
+
+		for(Edge edge: applicationSpecification.edgeSet()) {
+			if(edge.getCommunicationMode() == CommunicationType.FILE) {
 				source = edge.getSource();
 				target = edge.getTarget();
-
-				if(source.getNodeGroup().getNodeGroupBundle() == target.getNodeGroup().getNodeGroupBundle()) {
-					throw new TemporalDependencyException(source, target);
-				}
 
 				dependencyManager.insertDependency(source.getNodeGroup(), target.getNodeGroup().getNodeGroupBundle());
 			}
 		}
+	}
+
+	/**
+	 * Terminates the iteration .
+	 * 
+	 * @throws InexistentOutputException If one of the outputs are missing.
+	 */
+	public synchronized void terminateIteration() throws InexistentOutputException {
+		// If the iteration is finished, check if all the outputs are present
+
+		List<String> missingOutputs = new ArrayList<String>();;
+
+		for(String output: applicationSpecification.getOutputFilenames()) {
+			if(!FileHelper.exists(output)) {
+				missingOutputs.add(output);
+			}
+		}
+
+		if(missingOutputs.size() != 0) {
+			throw new InexistentOutputException(missingOutputs);
+		}
+	}
+
+	/**
+	 * Tests whether all the Node/NodeGroups were already executed for this iteration.
+	 * 
+	 * @return True if all the Node/NodeGroups were already executed for this iteration, false otherwise.
+	 */
+	public synchronized boolean finishedIteration() {
+		return (!dependencyManager.hasLockedDependents() && !dependencyManager.hasUnlockedDependents() && (scheduledNodeGroups.size() == 0));
 	}
 
 	/**
@@ -268,28 +415,37 @@ public class ConcreteScheduler implements Scheduler {
 	 * 
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
 	 */
-	public synchronized boolean scheduleNodeGroupBundle() throws InsufficientLaunchersException {
-		if(!dependencyManager.hasFreeDependents()) {
+	public synchronized boolean schedule() throws InsufficientLaunchersException {
+		if(!dependencyManager.hasUnlockedDependents()) {
 			return false;
 		}
 
 		Set<NodeGroupBundle> freeNodeGroupBundles = dependencyManager.obtainFreeDependents();
 
 		for(NodeGroupBundle freeNodeGroupBundle: freeNodeGroupBundles) {
-			System.out.println("Scheduling node bundle " + freeNodeGroupBundle);
+			System.out.println("Scheduling node group bundle " + freeNodeGroupBundle);
 
-			for(NodeGroup nodeGroup: freeNodeGroupBundle) {
-				scheduleNodeGroup(nodeGroup);
-			}
+			scheduleNodeGroupBundle(freeNodeGroupBundle);
 		}
 
-		return true;
+		return true;	
+	}
+
+	/**
+	 * Try to schedule the informed NodeGroupBundle.
+	 * 
+	 * @throws InsufficientLaunchersException If no alive Launcher can receive NodeGroups.
+	 */
+	private void scheduleNodeGroupBundle(NodeGroupBundle nodeGroupBundle) throws InsufficientLaunchersException {
+		for(NodeGroup nodeGroup: nodeGroupBundle.getNodeGroups()) {
+			scheduleNodeGroup(nodeGroup);
+		}
 	}
 
 	/**
 	 * Try to schedule the informed NodeGroup.
 	 * 
-	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
+	 * @throws InsufficientLaunchersException If no alive Launcher can receive the informed NodeGroup.
 	 */
 	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
 		nodeGroup.prepareSchedule(serialNumberCounter++);
@@ -348,41 +504,5 @@ public class ConcreteScheduler implements Scheduler {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Setups the scheduler for the new application being executed.
-	 * @param applicationSpecification Application specification.
-	 * 
-	 * @return True if the setup finished successfully; false otherwise.
-	 * 
-	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
-	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
-	 */
-	public synchronized boolean setup(ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException {
-		setApplicationSpecification(applicationSpecification);
-
-		dependencyManager = new DependencyManager<NodeGroup, NodeGroupBundle>();
-
-		scheduledNodeGroups = new HashMap<Long, NodeGroup>();
-
-		long graphParsingStartTimer = System.currentTimeMillis();
-
-		createNodeGroupBundleDependencies();
-
-		long graphParsingEndingTimer = System.currentTimeMillis();
-
-		System.out.println("Time to parse graph for application " + applicationSpecification.getName() + ": " + (graphParsingEndingTimer - graphParsingStartTimer) + " msec");
-
-		return true;
-	}
-
-	/**
-	 * Tests whether all the Node/NodeGroups were already executed.
-	 * 
-	 * @return True if all the Node/NodeGroups were already executed, false otherwise.
-	 */
-	public synchronized boolean finished() {
-		return (!dependencyManager.hasLockedDependents() && !dependencyManager.hasFreeDependents() && (scheduledNodeGroups.size() == 0));
 	}
 }
