@@ -7,40 +7,42 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package appspecs;
 
 import java.util.Iterator;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.HashSet;
 
-import org.jgrapht.graph.*;
+import java.util.Map;
+import java.util.HashMap;
 
-import utilities.FileHelper;
+import org.jgrapht.graph.*;
 
 import communication.ChannelHandler;
 import communication.FileChannelHandler;
 import communication.SHMChannelHandler;
 import communication.TCPChannelHandler;
 
-import appspecs.exceptions.InexistentInputException;
-import appspecs.exceptions.OverlappingOutputException;
+import enums.CommunicationType;
+import exceptions.OverlapingFilesException;
 
 public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private static final long serialVersionUID = 1L;
 
-	private Set<Node> initials;
-	private Set<Node> finals;
+	protected String name;
+	protected String directoryPrefix;
 
-	private String name;
-	private String directoryPrefix;
+	protected Map<String, Input> inputs;
+	protected Map<String, Output> outputs;
 
-	private Set<String> outputFilenames;
-
-	private long inputCounter = 1L;
-	private long outputCounter = 1L;
+	protected Set<Node> fileConsumers;
+	protected Set<Node> fileProducers;
+	
+	protected Decider decider;
 
 	protected String nameGenerationString = "node-";
 	protected long nameGenerationCounter = 0L;
@@ -51,14 +53,15 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		this.name = name;
 		this.directoryPrefix = directoryPrefix;
 
-		initials = new HashSet<Node>();
-		finals = new HashSet<Node>();
+		fileConsumers = new HashSet<Node>();
+		fileProducers = new HashSet<Node>();
 
-		outputFilenames = new HashSet<String>();
+		inputs = new HashMap<String, Input>();
+		outputs = new HashMap<String, Output>();
 	}
 
 	public ApplicationSpecification() {
-		this("default_application", "/cluserdata");
+		this("default_application", "/userdata");
 	}
 
 	public ApplicationSpecification(String name, String directoryPrefix, Node[] nodes, Edge[] edges) {
@@ -66,6 +69,22 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		insertNodes(nodes);
 		insertEdges(edges);
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setDirectoryPrefix(String directoryPrefix) {
+		this.directoryPrefix = directoryPrefix;
+	}
+
+	public String getDirectoryPrefix() {
+		return directoryPrefix;
 	}
 
 	public void insertNodes(Node[] nodes) {
@@ -82,11 +101,11 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
-	public void insertEdges(Node[] origins, Node[] destinations, EdgeType edgeType) {
-		insertEdges(origins, destinations, edgeType, -1);
+	public void insertEdges(Node[] origins, Node[] destinations, CommunicationType communicationType) {
+		insertEdges(origins, destinations, communicationType, -1);
 	}
 
-	public void insertEdges(Node[] origins, Node[] destinations, EdgeType edgeType, Integer quantity) {
+	public void insertEdges(Node[] origins, Node[] destinations, CommunicationType communicationType, Integer quantity) {
 		Node currentOrigin = null;
 		Node currentDestination = null;
 
@@ -99,14 +118,14 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 				for(int j = 0; j < destinations.length; j++) {
 					currentDestination = destinations[j];
 
-					addEdge(currentOrigin, currentDestination, new Edge(edgeType));
+					addEdge(currentOrigin, currentDestination, new Edge(communicationType));
 				}
 			}
 			else {
 				for(int j = 0; j < quantity; j++) {
 					currentDestination = destinations[destinationPosition++ % destinations.length];
 
-					addEdge(currentOrigin, currentDestination, new Edge(edgeType));
+					addEdge(currentOrigin, currentDestination, new Edge(communicationType));
 				}
 			}
 		}
@@ -124,60 +143,60 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
-	public void addInitial(Node node, String filename) throws InexistentInputException {
-		if(!FileHelper.exists(getAbsoluteFileName(filename))) {
-			throw new InexistentInputException(getAbsoluteFileName(filename));
+	public void addInput(Node node, String filename) {
+		String absoluteFileName = getAbsoluteFileName(filename);
+
+		Input input = inputs.get(absoluteFileName);
+
+		if(input == null) {
+			input = new Input(new FileChannelHandler(ChannelHandler.Mode.INPUT, filename, absoluteFileName));
 		}
 
-		node.setType(NodeType.INITIAL);
-		node.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, "input-" + (inputCounter++), getAbsoluteFileName(filename)));
+		node.addInputChannelHandler(input.getChannelHandler());
+		input.addConsumer(node);
 
-		initials.add(node);
+		inputs.put(absoluteFileName, input);
+		fileConsumers.add(node);
 	}
 
-	public Set<Node> getInitials() {
-		return initials;
+	public Collection<Input> getInputs() {
+		return inputs.values();
 	}
 
-	public void setInitials(Set<Node> initials) {
-		this.initials = initials;
+	public Set<Node> getFileConsumers() {
+		return fileConsumers;
 	}
 
-	public void addFinal(Node node, String filename) throws OverlappingOutputException {
-		if(outputFilenames.contains(filename)) {
-			throw new OverlappingOutputException(filename);
+	public void addOutput(Node node, String filename) throws OverlapingFilesException {
+		String absoluteFileName = getAbsoluteFileName(filename);
+
+		if(outputs.containsKey(absoluteFileName)) {
+			throw new OverlapingFilesException(absoluteFileName);
 		}
 
-		outputFilenames.add(filename);
+		Output output = new Output(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, filename, absoluteFileName));
 
-		node.setType(NodeType.FINAL);
-		node.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, "output-" + (outputCounter++), getAbsoluteFileName(filename)));
+		node.addOutputChannelHandler(output.getChannelHandler());
+		output.setProducer(node);
 
-		finals.add(node);
+		outputs.put(absoluteFileName, output);
+		fileProducers.add(node);
 	}
 
-	public Set<Node> getFinals() {
-		return finals;
+	public Collection<Output> getOutputs() {
+		return outputs.values();
 	}
 
-	public void setFinals(Set<Node> finals) {
-		this.finals = finals;
+	public Set<Node> getFileProducers() {
+		return fileProducers;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public Decider getDecider() {
+		return decider;
 	}
 
-	public String getName() {
-		return name;
-	}
-
-	public void setDirectoryPrefix(String directoryPrefix) {
-		this.directoryPrefix = directoryPrefix;
-	}
-
-	public String getDirectoryPrefix() {
-		return directoryPrefix;
+	public void setDecider(Decider decider) {
+		this.decider = decider;
 	}
 
 	public String getAbsoluteDirectory() {
@@ -214,15 +233,24 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return outgoingEdgesOf(node);
 	}
 
-	public boolean initialize() {
-		return FileHelper.exists(getAbsoluteDirectory());
-	}
-
 	public String generateUniqueName() {
 		return nameGenerationString + (nameGenerationCounter++);
 	}
 
-	public void finalize() {
+	public void finalize() throws OverlapingFilesException {
+		// Check if input or output filenames overlap
+
+		for(Input input: inputs.values()) {
+			for(Output output: outputs.values()) {
+				String inputFilename = input.getChannelHandler().getLocation();
+				String outputFilename = output.getChannelHandler().getLocation();
+
+				if(inputFilename.equals(outputFilename)) {
+					throw new OverlapingFilesException(inputFilename);
+				}
+			}
+		}
+
 		long anonymousFileChannelCounter = 1000L;
 
 		Node source, target;

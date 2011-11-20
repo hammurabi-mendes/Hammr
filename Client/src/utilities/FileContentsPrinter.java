@@ -9,18 +9,28 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-package appspecs.exceptions;
+package utilities;
 
-public class OverlappingOutputException extends Exception {
-	private static final long serialVersionUID = 1L;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
+import communication.ChannelElement;
+import communication.FileChannelElementReader;
+
+public class FileContentsPrinter {
 	private String filename;
 
-	public OverlappingOutputException(String filename) {
+	public FileContentsPrinter(String filename) {
 		this.filename = filename;
 	}
 
-	public String toString() {
-		return "Overlapping output (file " + filename + ")";
+	public void dump() throws FileNotFoundException, IOException {
+		FileChannelElementReader reader = new FileChannelElementReader(filename);
+
+		ChannelElement element;
+
+		while((element = reader.read()) != null) {
+			System.out.println(element);
+		}
 	}
 }

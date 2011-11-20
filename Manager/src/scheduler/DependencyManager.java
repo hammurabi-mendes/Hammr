@@ -25,7 +25,7 @@ import java.util.HashMap;
  * @param <X> Type of the first item.
  * @param <Y> Type of the second item.
  */
-public class DependencyManager<X, Y> {
+public class DependencyManager<X,Y> {
 	// Maps trigger -> Its own dependencies
 	private Map<X, Set<Y>> dependencies;
 
@@ -33,7 +33,7 @@ public class DependencyManager<X, Y> {
 	private Map<Y, Integer> lockedDependents;
 
 	// Dependents that don't have any present triggerer
-	private Set<Y> freeDependents;
+	private Set<Y> unlockedDependents;
 
 	/**
 	 * Constructor method.
@@ -43,7 +43,7 @@ public class DependencyManager<X, Y> {
 
 		lockedDependents = new HashMap<Y, Integer>();
 
-		freeDependents = new HashSet<Y>();
+		unlockedDependents = new HashSet<Y>();
 	}
 
 	/**
@@ -55,7 +55,7 @@ public class DependencyManager<X, Y> {
 	 */
 	public void insertDependency(X triggerer, Y dependent) {
 		if(triggerer == null) {
-			freeDependents.add(dependent);
+			unlockedDependents.add(dependent);
 
 			return;
 		}
@@ -104,8 +104,8 @@ public class DependencyManager<X, Y> {
 	 * 
 	 * @return True if some dependents don't have any present triggerer; false otherwise.
 	 */
-	public boolean hasFreeDependents() {
-		return (freeDependents.size() > 0);
+	public boolean hasUnlockedDependents() {
+		return (unlockedDependents.size() > 0);
 	}
 
 	/**
@@ -123,18 +123,18 @@ public class DependencyManager<X, Y> {
 	 * @return The dependents that don't have any present triggerer.
 	 */
 	public Set<Y> obtainFreeDependents() {
-		Set<Y> result = freeDependents;
+		Set<Y> result = unlockedDependents;
 
-		resetFreeDependents();
+		resetUnlockedDependents();
 
 		return result;
 	}
 
 	/**
-	 * Reset the list of free dependencies after some dependents are effectively released.
+	 * Reset the list of unlocked dependencies after some dependents are effectively released.
 	 */
-	public void resetFreeDependents() {
-		freeDependents = new HashSet<Y>();
+	public void resetUnlockedDependents() {
+		unlockedDependents = new HashSet<Y>();
 	}
 
 	/**
@@ -179,7 +179,7 @@ public class DependencyManager<X, Y> {
 			if(currentCounter <= 0) {
 				lockedDependents.remove(dependent);
 
-				freeDependents.add(dependent);
+				unlockedDependents.add(dependent);
 			}
 			else {
 				lockedDependents.put(dependent, currentCounter);

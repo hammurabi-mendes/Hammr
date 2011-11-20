@@ -11,13 +11,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package communication;
 
+import enums.CommunicationType;
+
 public class FileChannelHandler extends ChannelHandler {
 	private static final long serialVersionUID = 1L;
 
 	private String location;
 
 	public FileChannelHandler(ChannelHandler.Mode mode, String name, String location) {
-		super(ChannelHandler.Type.FILE, mode, name);
+		super(CommunicationType.FILE, mode, name);
 
 		setLocation(location);
 	}

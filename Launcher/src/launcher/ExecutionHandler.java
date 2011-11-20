@@ -7,7 +7,7 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package launcher;
 
@@ -24,6 +24,8 @@ import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 
 import appspecs.Node;
+
+import enums.CommunicationType;
 
 import execinfo.NodeGroup;
 import execinfo.ResultSummary;
@@ -140,7 +142,7 @@ public class ExecutionHandler extends Thread {
 			SHMChannelElementMultiplexer shmChannelElementMultiplexer = null;
 
 			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.SHM) {
+				if(channelHandler.getType() == CommunicationType.SHM) {
 					SHMChannelHandler shmChannelHandler = (SHMChannelHandler) channelHandler;
 
 					if(shmChannelElementMultiplexer == null) {
@@ -158,7 +160,7 @@ public class ExecutionHandler extends Thread {
 
 		for(Node node: nodeGroup.getNodes()) {
 			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.SHM) {
+				if(channelHandler.getType() == CommunicationType.SHM) {
 					SHMChannelHandler shmChannelHandler = (SHMChannelHandler) channelHandler;
 
 					// For SHM, all the outputs go to the unique output pipe for each node
@@ -177,7 +179,7 @@ public class ExecutionHandler extends Thread {
 			TCPChannelElementMultiplexer tcpChannelElementMultiplexer = null;
 
 			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.TCP) {
+				if(channelHandler.getType() == CommunicationType.TCP) {
 					TCPChannelHandler tcpChannelHandler = (TCPChannelHandler) channelHandler;
 
 					if(tcpChannelElementMultiplexer == null) {
@@ -203,7 +205,7 @@ public class ExecutionHandler extends Thread {
 
 		for(Node node: nodeGroup.getNodes()) {
 			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.TCP) {
+				if(channelHandler.getType() == CommunicationType.TCP) {
 					TCPChannelHandler tcpChannelHandler = (TCPChannelHandler) channelHandler;
 
 					// For TCP, (1) obtain the address of the output server from the manager
@@ -229,7 +231,7 @@ public class ExecutionHandler extends Thread {
 
 		for(Node node: nodeGroup.getNodes()) {
 			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.FILE) {
+				if(channelHandler.getType() == CommunicationType.FILE) {
 					FileChannelHandler fileChannelHandler = (FileChannelHandler) channelHandler;
 
 					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(fileChannelHandler.getLocation());
@@ -239,7 +241,7 @@ public class ExecutionHandler extends Thread {
 			}
 
 			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == ChannelHandler.Type.FILE) {
+				if(channelHandler.getType() == CommunicationType.FILE) {
 					FileChannelHandler fileChannelHandler = (FileChannelHandler) channelHandler;
 
 					FileChannelElementWriter fileChannelElementWriter = new FileChannelElementWriter(fileChannelHandler.getLocation());
@@ -256,19 +258,19 @@ public class ExecutionHandler extends Thread {
 	 * @return Result summary to send back to the master.
 	 */
 	private ResultSummary performExecution() {
-		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.size()];
+		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.getSize()];
 
-		Iterator<Node> iterator = nodeGroup.iterator();
+		Iterator<Node> iterator = nodeGroup.getNodesIterator();
 
 		long globalTimerStart = System.currentTimeMillis();
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			nodeHandlers[i] = new NodeHandler(iterator.next());
 
 			nodeHandlers[i].start();
 		}
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			try {
 				nodeHandlers[i].join();
 			} catch (InterruptedException exception) {
@@ -285,7 +287,7 @@ public class ExecutionHandler extends Thread {
 
 		resultSummary.setNodeGroupTiming(globalTimerFinish - globalTimerStart);
 
-		for(int i = 0; i < nodeGroup.size(); i++) {
+		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			resultSummary.addNodeMeasurements(nodeHandlers[i].getNode().getName(), nodeHandlers[i].getNodeMeasurements());
 		}
 
@@ -392,7 +394,7 @@ public class ExecutionHandler extends Thread {
 		 */
 		public long getCpuTime() {
 			// We get results in milliseconds, not in nanoseconds
-			
+
 			return (cpuLocalTimerFinish - cpuLocalTimerStart) / 1000000;
 		}
 
@@ -403,7 +405,7 @@ public class ExecutionHandler extends Thread {
 		 */
 		public long getUserTime() {
 			// We get results in milliseconds, not in nanoseconds
-			
+
 			return (userLocalTimerFinish - userLocalTimerStart) / 1000000;
 		}
 

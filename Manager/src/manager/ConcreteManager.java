@@ -7,7 +7,7 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package manager;
 
@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 
 import appspecs.ApplicationSpecification;
 
+import exceptions.InexistentInputException;
+import exceptions.InexistentOutputException;
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
@@ -118,29 +120,16 @@ public class ConcreteManager implements Manager {
 			return false;
 		}
 
-		ApplicationInformationHolder applicationInformationHolder = setupApplication(applicationName, applicationSpecification);
-
-		Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
-
 		try {
-			// Setup the scheduler, and try to schedule an initial wave of NodeGroups
+			ApplicationInformationHolder applicationInformationHolder = setupApplication(applicationName, applicationSpecification);
 
-			if(!scheduler.setup(applicationSpecification)) {
-				System.err.println("Error setting up scheduler");
+			Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
 
-				return false;
-			}
-
-			if(!scheduler.scheduleNodeGroupBundle()) {
+			if(!scheduler.schedule()) {
 				System.err.println("Initial schedule indicated that no free node group bundles are present");
 
 				return false;
 			}
-		} catch (InsufficientLaunchersException exception) {
-			System.err.println("Initial schedule indicated an insufficient number of launchers");
-
-			finishApplication(applicationName);
-			return false;
 		} catch (TemporalDependencyException exception) {
 			System.err.println("Scheduler setup found a temporal dependency problem");
 
@@ -151,6 +140,15 @@ public class ConcreteManager implements Manager {
 
 			finishApplication(applicationName);
 			return false;
+		} catch (InsufficientLaunchersException exception) {
+			System.err.println("Initial schedule indicated an insufficient number of launchers");
+
+			finishApplication(applicationName);
+			return false;
+		} catch (InexistentInputException exception) {
+			System.err.println("Initial schedule indicated that some files are missing: " + exception.toString());
+
+			finishApplication(applicationName);
 		}
 
 		return true;
@@ -247,16 +245,35 @@ public class ConcreteManager implements Manager {
 		applicationInformationHolder.addReceivedResultSummaries(resultSummary);
 
 		try {
-			if(scheduler.finished()) {
-				finishApplication(resultSummary.getNodeGroupApplication());
+			if(scheduler.finishedIteration()) {
+				scheduler.terminateIteration();
+
+				if(scheduler.finishedApplication()) {
+					scheduler.terminateApplication();
+					
+					finishApplication(resultSummary.getNodeGroupApplication());
+				}
+				else {
+					scheduler.prepareIteration();
+				}
 			}
 			else {
-				scheduler.scheduleNodeGroupBundle();
+				scheduler.schedule();
 			}
 
 			return true;
 		} catch (InsufficientLaunchersException exception) {
 			System.err.println("Unable to proceed scheduling for application " + resultSummary.getNodeGroupApplication() + "! Aborting application...");
+
+			finishApplication(resultSummary.getNodeGroupApplication());
+			return false;
+		} catch (InexistentInputException exception) {
+			System.err.println("Necessary input files missing for application" + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
+
+			finishApplication(resultSummary.getNodeGroupApplication());
+			return false;
+		} catch (InexistentOutputException exception) {
+			 System.err.println("Necessary output files missing for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
 
 			finishApplication(resultSummary.getNodeGroupApplication());
 			return false;
@@ -271,18 +288,26 @@ public class ConcreteManager implements Manager {
 	 * @param applicationSpecification Application specification.
 	 * 
 	 * @return The newly created holder.
+	 * 
+	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
+	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
+	 * @throws InexistentInputException If one of the inputs for the first iteration are missing.
 	 */
-	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) {
+	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException, InexistentInputException {
 		ApplicationInformationHolder applicationInformationHolder = new ApplicationInformationHolder();
+
+		Scheduler applicationScheduler = new ConcreteScheduler(this);
 
 		applicationInformationHolder.setApplicationName(applicationName);
 		applicationInformationHolder.setApplicationSpecification(applicationSpecification);
+		applicationInformationHolder.setApplicationScheduler(applicationScheduler);
 
-		applicationInformationHolder.setApplicationScheduler(new ConcreteScheduler(this));
+		applicationInformationHolders.put(applicationName, applicationInformationHolder);
 
 		applicationInformationHolder.markStart();
 
-		applicationInformationHolders.put(applicationName, applicationInformationHolder);
+		applicationScheduler.prepareApplicaiton(applicationSpecification);
+		applicationScheduler.prepareIteration();
 
 		return applicationInformationHolder;
 	}

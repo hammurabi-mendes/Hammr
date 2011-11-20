@@ -13,12 +13,14 @@ package appspecs;
 
 import org.jgrapht.graph.DefaultEdge;
 
+import enums.CommunicationType;
+
 public class Edge extends DefaultEdge {
 	private static final long serialVersionUID = 1L;
 
-	private EdgeType type;
+	private CommunicationType type;
 
-	public Edge(EdgeType type) {
+	public Edge(CommunicationType type) {
 		setCommunicationMode(type);
 	}
 
@@ -30,11 +32,11 @@ public class Edge extends DefaultEdge {
 		return (Node) super.getTarget();
 	}
 
-	public void setCommunicationMode(EdgeType type) {
+	public void setCommunicationMode(CommunicationType type) {
 		this.type = type;
 	}
 
-	public EdgeType getCommunicationMode() {
+	public CommunicationType getCommunicationMode() {
 		return type;
 	}
 }

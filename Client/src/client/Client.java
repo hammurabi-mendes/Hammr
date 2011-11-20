@@ -7,7 +7,7 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package client;
 
@@ -18,18 +18,19 @@ import java.util.ArrayList;
 
 import java.rmi.RemoteException;
 
+import enums.CommunicationType;
+import exceptions.OverlapingFilesException;
+
 import mapreduce.appspecs.MapReduceSpecification;
 
 import interfaces.Manager;
 
 import appspecs.ApplicationSpecification;
-import appspecs.EdgeType;
 import appspecs.Node;
 
-import programs.ReaderSomeoneWriterSomeone;
+import nodes.TrivialNode;
 
-import appspecs.exceptions.InexistentInputException;
-import appspecs.exceptions.OverlappingOutputException;
+import programs.ReaderSomeoneWriterSomeone;
 
 import utilities.RMIHelper;
 
@@ -49,12 +50,6 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test1", baseDirectory);
 
-		if(!applicationSpecification.initialize()) {
-			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
-
-			System.exit(1);
-		}
-
 		String inputFilename;
 		String outputFilename;
 
@@ -69,28 +64,28 @@ public class Client {
 		for(int i = 0; i < nodesStage1.length; i++) {
 			inputFilename = "input-stage1-" + i + ".dat";
 
-			try {
-				applicationSpecification.addInitial(nodesStage1[i], inputFilename);
-			} catch (InexistentInputException exception) {
-				System.err.println(exception);
-
-				System.exit(1);
-			}
+			applicationSpecification.addInput(nodesStage1[i], inputFilename);
 		}
 
 		for(int i = 0; i < nodesStage1.length; i++) {
 			outputFilename = "output-stage1-" + i + ".dat";
 
 			try {
-				applicationSpecification.addFinal(nodesStage1[i], outputFilename);
-			} catch (OverlappingOutputException exception) {
+				applicationSpecification.addOutput(nodesStage1[i], outputFilename);
+			} catch (OverlapingFilesException exception) {
 				System.err.println(exception);
 
 				System.exit(1);
 			}
 		}
 
-		applicationSpecification.finalize();
+		try {
+			applicationSpecification.finalize();
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
 
 		try {
 			manager.registerApplication(applicationSpecification);
@@ -102,16 +97,10 @@ public class Client {
 		}
 	}
 
-	public void performTest2(EdgeType edgeType) {
+	public void performTest2(CommunicationType communicationType) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", baseDirectory);
-
-		if(!applicationSpecification.initialize()) {
-			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
-
-			System.exit(1);
-		}
 
 		String inputFilename;
 		String outputFilename;
@@ -127,13 +116,7 @@ public class Client {
 		for(int i = 0; i < nodesStage1.length; i++) {
 			inputFilename = "input-stage1-" + i + ".dat";
 
-			try {
-				applicationSpecification.addInitial(nodesStage1[i], inputFilename);
-			} catch (InexistentInputException exception) {
-				System.err.println(exception);
-
-				System.exit(1);
-			}
+			applicationSpecification.addInput(nodesStage1[i], inputFilename);
 		}
 
 		Node[] nodesStage2 = new Node[1];
@@ -148,17 +131,23 @@ public class Client {
 			outputFilename = "output-stage2-" + i + ".dat";
 
 			try {
-				applicationSpecification.addFinal(nodesStage2[i], outputFilename);
-			} catch (OverlappingOutputException exception) {
+				applicationSpecification.addOutput(nodesStage2[i], outputFilename);
+			} catch (OverlapingFilesException exception) {
 				System.err.println(exception);
 
 				System.exit(1);
 			}
 		}
 
-		applicationSpecification.insertEdges(nodesStage1, nodesStage2, edgeType, -1);
+		applicationSpecification.insertEdges(nodesStage1, nodesStage2, communicationType, -1);
 
-		applicationSpecification.finalize();
+		try {
+			applicationSpecification.finalize();
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
 
 		try {
 			manager.registerApplication(applicationSpecification);
@@ -175,12 +164,6 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test3", baseDirectory);
 
-		if(!applicationSpecification.initialize()) {
-			System.err.println("The directory " + applicationSpecification.getAbsoluteDirectory() + " does not exist");
-
-			System.exit(1);
-		}
-
 		Node[] nodes = new Node[numberNodesEdges];
 
 		for(int i = 0; i < nodes.length; i++) {
@@ -191,13 +174,7 @@ public class Client {
 
 		String inputFilename = "fake-input.dat";
 
-		try {
-			applicationSpecification.addInitial(nodes[0], inputFilename);
-		} catch (InexistentInputException exception) {
-			System.err.println(exception);
-
-			System.exit(1);
-		}
+		applicationSpecification.addInput(nodes[0], inputFilename);
 
 		Random random = new Random();
 
@@ -216,7 +193,7 @@ public class Client {
 					source[0] = nodes[i];
 					target[0] = nodes[j];
 
-					applicationSpecification.insertEdges(source, target, EdgeType.TCP);
+					applicationSpecification.insertEdges(source, target, CommunicationType.TCP);
 					numberEdges++;
 				}
 			}
@@ -224,7 +201,13 @@ public class Client {
 
 		System.out.println("Edges created: " + numberEdges);
 
-		applicationSpecification.finalize();
+		try {
+			applicationSpecification.finalize();
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
 
 		try {
 			manager.registerApplication(applicationSpecification);
@@ -260,7 +243,7 @@ public class Client {
 		if(command.equals("test2")) {
 			Client client = new Client(registryLocation, baseDirectory);
 
-			client.performTest2(EdgeType.TCP);
+			client.performTest2(CommunicationType.TCP);
 
 			System.exit(0);
 		}
