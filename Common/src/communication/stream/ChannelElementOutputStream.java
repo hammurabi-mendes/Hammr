@@ -12,8 +12,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package communication.stream;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 
 import java.io.OutputStream;
+
+import utilities.FileInfo;
 
 import communication.channel.ChannelElement;
 
@@ -24,7 +27,7 @@ import communication.channel.ChannelElement;
  *
  */
 
-public class ChannelElementOutputStream extends AbstractChannelElementOutputStream {
+public class ChannelElementOutputStream extends ObjectOutputStream {
 	private static long DEFAULT_WRITE_COUNT_FLUSH = 65535;
 
 	private long writeCounter = 0L;
@@ -33,7 +36,10 @@ public class ChannelElementOutputStream extends AbstractChannelElementOutputStre
 		super(outputStream);
 	}
 
-	@Override
+	public ChannelElementOutputStream(FileInfo fileInfo)throws IOException {
+		// TODO Auto-generated constructor stub
+	}
+
 	public void writeChannelElement(ChannelElement channelElement) throws IOException {
 		writeCounter++;
 

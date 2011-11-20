@@ -20,22 +20,24 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import mapreduce.communication.MRChannelElement;
+import communication.channel.ChannelElement;
 import communication.writer.ChannelElementWriter;
 
-public abstract class Combiner<O,V> implements ChannelElementWriter<MRChannelElement<O,V>> {
+public abstract class Combiner<O,V> implements ChannelElementWriter {
 	private static final long serialVersionUID = 1L;
-	private ChannelElementWriter<MRChannelElement<O,V>> writer = null;
+	private ChannelElementWriter writer = null;
 	
 	private Map<O,V> currentValues = new HashMap<O,V>();
 
 	@Override
-	public final boolean write(MRChannelElement<O,V> elt) throws IOException
+	public final boolean write(ChannelElement elt) throws IOException
 	{
-		add(elt.getKey(), elt.getValue());
+		MRChannelElement<O,V> mrelt = (MRChannelElement<O,V>) elt;
+		add(mrelt.getKey(), mrelt.getValue());
 		return true;
 	}
 	
-	public void initialize(ChannelElementWriter<MRChannelElement<O,V>> writer)
+	public void initialize(ChannelElementWriter writer)
 	{
 		this.writer = writer;
 	}

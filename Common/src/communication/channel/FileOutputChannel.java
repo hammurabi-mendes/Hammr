@@ -1,7 +1,13 @@
 package communication.channel;
 
+import java.io.IOException;
+import java.io.OutputStream;
 
-public abstract class FileOutputChannel extends OutputChannel implements FileChannel
+import utilities.FileHelper;
+import utilities.FileInfo;
+
+
+public class FileOutputChannel extends OutputChannel implements FileChannel
 {
 
 	private static final long serialVersionUID = 1L;
@@ -17,5 +23,19 @@ public abstract class FileOutputChannel extends OutputChannel implements FileCha
 	public final String getPath()
 	{
 		return _path;
+	}
+	
+	public final long getLength(){
+		return FileHelper.getLengh(_path);
+	}
+	
+	public  boolean remove() throws IOException
+	{
+		return FileHelper.remove(_path);
+	}
+
+	public FileInfo getFileInfo() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

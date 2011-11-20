@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import utilities.Logging;
 import utilities.Pair;
 
+import communication.channel.ChannelElement;
 import communication.writer.ChannelElementWriter;
 
 import mapreduce.communication.MRChannelElement;
@@ -33,7 +34,7 @@ public final class MapperNode<INKEY, INVALUE, OUTKEY extends Comparable<OUTKEY>,
 	 * @author ljin
 	 * 
 	 */
-	private final class MapperCache implements ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> {
+	private final class MapperCache implements ChannelElementWriter {
 		private final Map<OUTKEY, List<OUTVALUE>> cache = new TreeMap<OUTKEY, List<OUTVALUE>>(new Comparator<OUTKEY>() {
 			@Override
 			public int compare(OUTKEY k1, OUTKEY k2) {
@@ -44,10 +45,10 @@ public final class MapperNode<INKEY, INVALUE, OUTKEY extends Comparable<OUTKEY>,
 
 		private final Reducer<OUTKEY, OUTVALUE, OUTKEY, OUTVALUE> combiner;
 
-		private final ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer;
+		private final ChannelElementWriter writer;
 
 		MapperCache(Reducer<OUTKEY, OUTVALUE, OUTKEY, OUTVALUE> combiner,
-				ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer) {
+				ChannelElementWriter writer) {
 			this.combiner = combiner;
 			this.writer = writer;
 		}
@@ -76,8 +77,12 @@ public final class MapperNode<INKEY, INVALUE, OUTKEY extends Comparable<OUTKEY>,
 			return true;
 		}
 
+
+
 		@Override
-		public boolean write(MRChannelElement<OUTKEY, OUTVALUE> channelElement) throws IOException {
+		public boolean write(ChannelElement in) throws IOException {
+			MRChannelElement<OUTKEY, OUTVALUE> channelElement = (MRChannelElement<OUTKEY, OUTVALUE>) in;
+			
 			List<OUTVALUE> lOutvalue = cache.get(channelElement.getKey());
 			if (lOutvalue == null) {
 				lOutvalue = new ArrayList<OUTVALUE>();

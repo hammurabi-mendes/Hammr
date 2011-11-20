@@ -24,7 +24,7 @@ public class CountingMapReduce {
 		private Integer one = new Integer(1);
 
 		@Override
-		public void map(Long key, String value, ChannelElementWriter<MRChannelElement<String, Integer>> writer)
+		public void map(Long key, String value, ChannelElementWriter writer)
 				throws Exception {
 			String line = value.toString();
 			StringTokenizer tokenizer = new StringTokenizer(line, ",.\"?'-! ;():");
@@ -39,6 +39,7 @@ public class CountingMapReduce {
 			}
 			Thread.sleep(10);
 		}
+
 	}
 
 	public static final class CountingReducer extends Reducer<String, Integer, String, Integer> {
@@ -46,7 +47,7 @@ public class CountingMapReduce {
 
 		@Override
 		public void reduce(String key, Iterable<Integer> values,
-				ChannelElementWriter<MRChannelElement<String, Integer>> writer) throws IOException {
+				ChannelElementWriter writer) throws IOException {
 			int sum = 0;
 			for (int value : values) {
 				sum += value;

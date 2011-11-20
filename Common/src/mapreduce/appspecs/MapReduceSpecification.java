@@ -46,36 +46,9 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	public void insertMappers(String[] inputs, Node[] mappers) throws InexistentInputException {
 		stageMappers(mappers);
-		try {
-			int i = 0;
-			for (String input : inputs) {
-				long length = DistributedFileSystemFactory.getDistributedFileSystem().getFileLength(
-						getAbsoluteFileName(input));
-				long blocksize = DistributedFileSystemFactory.getDistributedFileSystem().getBlockSize(
-						getAbsoluteFileName(input));
-				for (long offset = 0; offset < length; offset += blocksize) {
-					addInput(mappers[i++], input, offset, Math.min(offset + blocksize, length));
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void insertMappers(String input, Node[] mappers) {
-		try {
-			long length = DistributedFileSystemFactory.getDistributedFileSystem().getFileLength(
-					getAbsoluteFileName(input));
-			long blocksize = DistributedFileSystemFactory.getDistributedFileSystem().getBlockSize(
-					getAbsoluteFileName(input));
-
-			int nMappers = mappers.length;
-			stageMappers(mappers);
-			for (int i = 0; i < nMappers; ++i) {
-				addInput(mappers[i], input, i * blocksize, Math.min((i + 1) * blocksize, length));
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		for(int i = 0; i < inputs.length; ++i)
+		{
+			addInput(mappers[i], inputs[i]);
 		}
 	}
 

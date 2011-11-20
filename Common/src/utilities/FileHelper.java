@@ -26,4 +26,16 @@ public class FileHelper {
 
 		return fileSource.renameTo(fileTarget);
 	}
+
+	public static boolean remove(String name) {
+		File file = new File(name);
+
+		return file.delete();
+	}
+
+	public static long getLengh(String name) {
+		File file = new File(name);
+
+		return file.length();
+	}
 }

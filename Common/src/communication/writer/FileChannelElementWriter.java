@@ -14,12 +14,12 @@ package communication.writer;
 import java.io.IOException;
 
 import communication.channel.ChannelElement;
-import communication.stream.AbstractChannelElementOutputStream;
+import communication.stream.ChannelElementOutputStream;
 
 public final class FileChannelElementWriter implements ChannelElementWriter {
-	private final AbstractChannelElementOutputStream channelElementOutputStream;
+	private final ChannelElementOutputStream channelElementOutputStream;
 	
-	public FileChannelElementWriter(AbstractChannelElementOutputStream oStream) throws IOException 
+	public FileChannelElementWriter(ChannelElementOutputStream oStream) throws IOException 
 	{
 		channelElementOutputStream = oStream;
 	}

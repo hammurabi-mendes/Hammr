@@ -19,9 +19,9 @@ import mapreduce.communication.MRChannelElement;
 
 public abstract class Mapper<INKEY, INVALUE, OUTKEY extends Comparable<OUTKEY>, OUTVALUE> implements Serializable
 {
-	public abstract void map(INKEY key, INVALUE value, ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer) throws Exception;
+	public abstract void map(INKEY key, INVALUE value, ChannelElementWriter writer) throws Exception;
 	/*
 	 * Default cleanup function does nothing
 	 */
-	public void cleanup(ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer) throws Exception {}; 
+	public void cleanup(ChannelElementWriter writer) throws Exception {}; 
 }

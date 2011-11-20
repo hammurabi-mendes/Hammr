@@ -26,27 +26,21 @@ import java.lang.management.ThreadMXBean;
 
 import java.net.InetSocketAddress;
 
-import mapreduce.communication.MRTextInputChannelElementReader;
 
 import utilities.DistributedFileSystemFactory;
 import utilities.Logging;
 
 import appspecs.Node;
 
-import enums.CommunicationType;
 
 import execinfo.NodeGroup;
-import execinfo.OutputFileInfo;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
 
-import communication.channel.DistributedDataInputChannel;
-import communication.channel.DistributedFileInputChannel;
-import communication.channel.DistributedFileOutputChannel;
-import communication.channel.DistributedFileSplitInputChannel;
 import communication.channel.FileInputChannel;
+import communication.channel.FileOutputChannel;
+import communication.channel.HDFSFileInputChannel;
 import communication.channel.InputChannel;
-import communication.channel.LocalFileOutputChannel;
 import communication.channel.OutputChannel;
 import communication.channel.SHMInputChannel;
 import communication.channel.SHMOutputChannel;
@@ -55,9 +49,7 @@ import communication.channel.TCPOutputChannel;
 import communication.reader.FileChannelElementReader;
 import communication.reader.SHMChannelElementMultiplexer;
 import communication.reader.TCPChannelElementMultiplexer;
-import communication.stream.AbstractChannelElementOutputStream;
 import communication.stream.ChannelElementOutputStream;
-import communication.stream.ChannelElementTextOutputStream;
 import communication.writer.ChannelElementWriter;
 import communication.writer.FileChannelElementWriter;
 import communication.writer.SHMChannelElementWriter;
@@ -72,7 +64,6 @@ import exceptions.InexistentApplicationException;
  */
 public class ExecutionHandler extends Thread {
 	private NodeGroup nodeGroup;
-	private List<OutputFileInfo> _ofInfos = Collections.synchronizedList(new ArrayList<OutputFileInfo>());
 	
 	/**
 	 * Constructor.
@@ -255,35 +246,21 @@ public class ExecutionHandler extends Thread {
 		// handler (and corresponding file descriptor) will be created
 		for (Node node : nodeGroup.getNodes()) {
 			for (InputChannel channelHandler : node.getInputChannels()) {
-				if (channelHandler instanceof DistributedFileInputChannel) {
-					DistributedFileInputChannel fileChannelHandler = (DistributedFileInputChannel) channelHandler;
-
-					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(
-							DistributedFileSystemFactory.getDistributedFileSystem(), fileChannelHandler.getPath());
-
+				if (channelHandler instanceof FileInputChannel) {
+					FileInputChannel fileChannelHandler = (FileInputChannel) channelHandler;
+					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(fileChannelHandler.getFileInfo());
 					fileChannelHandler.setChannelElementReader(fileChannelElementReader);
 				}
 			}
 
 			for (OutputChannel channelHandler : node.getOutputChannels()) {
-				if (channelHandler instanceof DistributedFileOutputChannel) {
-					DistributedFileOutputChannel fileChannelHandler = (DistributedFileOutputChannel) channelHandler;
-					AbstractChannelElementOutputStream oStream = new ChannelElementOutputStream(DistributedFileSystemFactory.getDistributedFileSystem()
-									.create(fileChannelHandler.getPath()));
+				if (channelHandler instanceof FileOutputChannel) {
+					FileOutputChannel fileChannelHandler = (FileOutputChannel) channelHandler;
+					ChannelElementOutputStream oStream = new ChannelElementOutputStream(fileChannelHandler.getFileInfo());
 
 					ChannelElementWriter channelElementWriter = new FileChannelElementWriter(oStream);
 
 					fileChannelHandler.setChannelElementWriter(channelElementWriter);
-				}
-			}
-		}
-
-		for (Node node : nodeGroup.getNodes()) {
-			for (InputChannel channel : node.getInputChannels()) {
-				if (channel instanceof DistributedFileSplitInputChannel) {
-					DistributedFileSplitInputChannel inputfileSplitChannel = (DistributedFileSplitInputChannel) channel;
-					MRTextInputChannelElementReader reader = new MRTextInputChannelElementReader(inputfileSplitChannel);
-					inputfileSplitChannel.setChannelElementReader(reader);
 				}
 			}
 		}

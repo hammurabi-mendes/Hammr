@@ -27,12 +27,8 @@ import org.jgrapht.graph.*;
 
 import utilities.FileHelper;
 
-import communication.channel.DistributedFileInputChannel;
-import communication.channel.DistributedFileOutputChannel;
-import communication.channel.DistributedFileSplitInputChannel;
 import communication.channel.FileInputChannel;
 import communication.channel.FileOutputChannel;
-import communication.channel.LocalFileInputChannel;
 import communication.channel.SHMInputChannel;
 import communication.channel.SHMOutputChannel;
 import communication.channel.TCPInputChannel;
@@ -170,10 +166,6 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	
 	public void addInput(Node node, String filename)
 	{
-		addInput(node, filename, -1, -1);
-	}
-	
-	public void addInput(Node node, String filename, long start, long end) {
 		String absoluteFileName = getAbsoluteFileName(filename);
 
 		if(inputs.get(absoluteFileName) == null) {
@@ -181,7 +173,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 
 		
-		FileInputChannel inputChannelHandler = start == -1 ? new DistributedFileInputChannel(filename, absoluteFileName) : new DistributedFileSplitInputChannel(getAbsoluteFileName(filename), getAbsoluteFileName(filename), start, end);
+		FileInputChannel inputChannelHandler = new FileInputChannel(filename, absoluteFileName);
 
 		node.addInputChannel(inputChannelHandler);
 
@@ -204,7 +196,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 			throw new OverlapingFilesException(absoluteFileName);
 		}
 
-		FileOutputChannel outputChannelHandler = new DistributedFileOutputChannel(filename, absoluteFileName);
+		FileOutputChannel outputChannelHandler = new FileOutputChannel(filename, absoluteFileName);
 
 		node.addOutputChannel(outputChannelHandler);
 
@@ -287,13 +279,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 				target.addInputChannel(new TCPInputChannel(source.getName()));
 				break;
 			case FILE:
-				//source.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
-				//target.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, source.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
-
 				String filePath = this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat";
 				
-				source.addOutputChannel(new DistributedFileOutputChannel(target.getName(), filePath));
-				target.addInputChannel(new DistributedFileInputChannel(source.getName(), filePath));
+				source.addOutputChannel(new FileOutputChannel(target.getName(), filePath));
+				target.addInputChannel(new FileInputChannel(source.getName(), filePath));
 				
 				anonymousFileChannelCounter++;
 

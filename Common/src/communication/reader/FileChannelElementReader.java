@@ -9,6 +9,7 @@ import java.io.IOException;
 import communication.channel.ChannelElement;
 import communication.stream.ChannelElementInputStream;
 
+import utilities.FileInfo;
 import utilities.Logging;
 
 public class FileChannelElementReader implements ChannelElementReader {
@@ -16,6 +17,10 @@ public class FileChannelElementReader implements ChannelElementReader {
 
 	public FileChannelElementReader(FileSystem fs, String location) throws FileNotFoundException, IOException {
 		channelElementInputStream = new ChannelElementInputStream(fs.open(location));
+	}
+
+	public FileChannelElementReader(FileInfo fileInfo) {
+		// TODO Auto-generated constructor stub
 	}
 
 	@Override
