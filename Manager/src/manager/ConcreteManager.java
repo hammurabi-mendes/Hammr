@@ -16,6 +16,8 @@ import java.util.LinkedHashMap;
 
 import java.net.InetSocketAddress;
 
+import conf.Config;
+
 import appspecs.ApplicationSpecification;
 
 import exceptions.InsufficientLaunchersException;
@@ -27,6 +29,7 @@ import execinfo.ResultSummary;
 import scheduler.Scheduler;
 import scheduler.ConcreteScheduler;
 
+import utilities.Logging;
 import utilities.RMIHelper;
 
 /**
@@ -35,7 +38,8 @@ import utilities.RMIHelper;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ConcreteManager implements Manager {
-	private String baseDirectory;
+	private static ConcreteManager singleton = null;
+	private final String baseDirectory;
 
 	// Active launchers, mapped by ID
 	private Map<String, Launcher> registeredLaunchers;
@@ -45,6 +49,19 @@ public class ConcreteManager implements Manager {
 
 	private Random random;
 
+	/**
+	 * Actual initializing routine.
+	 */
+	static {
+		Logging.Info(("[ConcreteManager] Initializing ConcreteManage singleton..."));
+		String rmiRegistryLoc = System.getProperty("java.rmi.server.location");
+		String baseDir = System.getProperty("hammr.manager.basedir");
+		Logging.Info("[ConcreteManager] RMI Registry: " + rmiRegistryLoc);
+		Logging.Info("[ConcreteManager] Base Directory: " + baseDir);
+		singleton = new ConcreteManager(baseDir);
+		RMIHelper.exportAndRegisterRemoteObject(rmiRegistryLoc, "Manager", singleton);
+	}
+	
 	/**
 	 * Constructor method.
 	 * 
@@ -348,27 +365,6 @@ public class ConcreteManager implements Manager {
 		resultGenerator.start();
 	}
 
-	/**
-	 * Manager startup method.
-	 * 
-	 * @param arguments A list containing:
-	 *        1) The registry location;
-	 *        2) The manager working directory.
-	 */
 	public static void main(String[] arguments) {
-		if(arguments.length != 2) {
-			System.err.println("Usage: ConcreteManager <registry_location> <base_directory>");
-
-			System.exit(1);
-		}	
-
-		String registryLocation = arguments[0];
-
-		// Initiates a concrete manager and makes it available
-		// for remote method calls.
-
-		ConcreteManager concreteManager = new ConcreteManager(arguments[1]);
-
-		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", concreteManager);
 	}
 }

@@ -121,7 +121,7 @@ public class NodeGroup extends HashSet<Node> implements Serializable {
 	public void prepareSchedule(long serialNumber) {
 		setSerialNumber(serialNumber);
 
-		setNodeGroupBundle(null);
+		//setNodeGroupBundle(null); ? why doing this?
 	}
 
 	public String toString() {
@@ -142,5 +142,15 @@ public class NodeGroup extends HashSet<Node> implements Serializable {
 		result += "]";
 
 		return result;
+	}
+	
+	/**
+	 * Get the id of the node group. The id of node group is dynamic and would
+	 * change if it runs several times.
+	 * 
+	 * @return
+	 */
+	public final String getId() {
+		return "NodeGroup-" + application + "-" + serialNumber;
 	}
 }

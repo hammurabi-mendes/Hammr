@@ -1,31 +1,17 @@
 package mapreduce.programs;
 
-import appspecs.Node;
+import java.io.Serializable;
+
+import communication.writer.ChannelElementWriter;
 
 import mapreduce.communication.MRChannelElement;
 
-public abstract class Reducer<O,V> extends Node {
+public abstract class Reducer<INKEY extends Comparable<INKEY>,INVALUE,OUTKEY extends Comparable<OUTKEY>,OUTVALUE> implements Serializable
+{
 	private static final long serialVersionUID = 1L;
-
-	@SuppressWarnings("unchecked")
-	public void run() {
-		MRChannelElement<O,V> channelElement;
-
-		while(true) {
-			channelElement = (MRChannelElement<O,V>) readSomeone();
-
-			if(channelElement == null) {
-				break;
-			}
-
-			reduce(channelElement.getObject(), channelElement.getValue());
-		}
-
-		finalizeReduce();
-
-		closeOutputs();
-	}
-
-	protected abstract void reduce(O object, V value);
-	protected abstract void finalizeReduce();
+	public abstract void reduce(INKEY key, Iterable<INVALUE> values, ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer) throws Exception;
+	/*
+	 * Default cleanup function does nothing
+	 */
+	public void cleanup(ChannelElementWriter<MRChannelElement<OUTKEY, OUTVALUE>> writer) throws Exception {};
 }

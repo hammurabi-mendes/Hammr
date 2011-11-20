@@ -2,7 +2,7 @@ package programs;
 
 import appspecs.Node;
 
-import communication.ChannelElement;
+import communication.channel.ChannelElement;
 
 public class ReaderSomeoneWriterEveryone extends Node {
 	private static final long serialVersionUID = 1L;
@@ -20,6 +20,6 @@ public class ReaderSomeoneWriterEveryone extends Node {
 			writeEveryone(channelElement);
 		}
 
-		closeOutputs();
+		flushAndCloseOutputs();
 	}
 }

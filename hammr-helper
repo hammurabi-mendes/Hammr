@@ -4,11 +4,15 @@ BASEDIR=`pwd`
 RUNNINGDIR=$(pwd)
 
 REGISTRYLOC=localhost
+HDFSURI="hdfs://$REGISTRYLOC:9000"
 
 COMMONDIR="$BASEDIR/Common/bin/"
 LIBDIR="$BASEDIR/lib/"
 
+
 JGRAPHFILE="$LIBDIR/jgrapht-jdk1.6.jar"
+HADOOPJAR="$LIBDIR/hadoop-core-0.20.2-cdh3u1.jar"
+COMMONLOGGINGJAR="$LIBDIR/commons-logging-1.1.1.jar"
 
 BINDIRS=$COMMONDIR:$BASEDIR/Client/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 
@@ -17,7 +21,7 @@ HEAPPARAMS="-XX:-UseGCOverheadLimit -Xms2500M -Xmx2500M"
 
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
-export CLASSPATH=$BINDIRS:$JGRAPHFILE
+export CLASSPATH=$BINDIRS:$JGRAPHFILE:$HADOOPJAR:$COMMONLOGGINGJAR
 
 Compile() {
 	ant -buildfile $BASEDIR/Common/build.xml   && \
@@ -49,12 +53,12 @@ RunManager() {
 
 	echo "Running manager: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $RUNNINGDIR $@ &
+	$BASEDIR/scripts/start_manager.sh --hammr_home $BASEDIR --master_host localhost
 }
 
 RunLauncher() {
 	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
+    $BASEDIR/scripts/start_launcher.sh --hammr_home $BASEDIR --master_host localhost
 }
 
 RunClient() {
@@ -72,10 +76,15 @@ RunGenOutput() {
 	java -cp $CLASSPATH $HEAPPARAMS utilities.counting.CountingOutputExtractor $@
 }
 
+RunProgram() {
+    java -cp $CLASSPATH $HEAPPARAMS -Djava.security.policy=$BASEDIR/Client/security.policy -Dhammr.hdfs.uri=$HDFSURI -Djava.rmi.server.codebase=$CODEBASE -Djava.rmi.server.location=$REGISTRYLOC $@;
+}
+
 Kill() {
-	killall -9 rmiregistry 2>/dev/null
 	ps ax -o pid= | grep ConcreteManager | grep -v grep | xargs kill -9 2>/dev/null
 	ps ax -o pid= | grep ConcreteLauncher | grep -v grep | xargs kill -9 2>/dev/null
+    $BASEDIR/scripts/stop_manager.sh --hammr_home $BASEDIR
+    $BASEDIR/scripts/stop_launcher.sh --hammr_home $BASEDIR
 }
 
 COMMAND=$1; shift;
@@ -90,6 +99,7 @@ case "${COMMAND}" in
 		gen_input)    RunGenInput $@ ;;
 		gen_output)   RunGenOutput $@ ;;
     kill)         Kill $@ ;;
+    run)          RunProgram $@ ;;
     *)            echo "Unrecognized command"; exit 1; ;;
 esac
 

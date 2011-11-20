@@ -39,7 +39,7 @@ public abstract class Merger<O,V> extends Node {
 		while(channelElements.size() > 0) {
 			channelElement = channelElements.poll();
 
-			writeSomeone(channelElement);
+			write(channelElement);
 
 			String input = backwardMapping.get(channelElement);
 
@@ -54,14 +54,14 @@ public abstract class Merger<O,V> extends Node {
 			}
 		}
 
-		closeOutputs();
+		flushAndCloseOutputs();
 	}
 
 	public abstract Comparator<MRChannelElement<O,V>> getComparator();
 
 	public class MRChannelElementComparatorObject<X extends Comparable<X>,Y> implements Comparator<MRChannelElement<X,Y>> {
 		public int compare(MRChannelElement<X,Y> first, MRChannelElement<X,Y> second) {
-			return first.getObject().compareTo(second.getObject());
+			return first.getKey().compareTo(second.getKey());
 		}
 	}
 

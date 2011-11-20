@@ -9,12 +9,14 @@ import org.jgrapht.graph.*;
 
 import utilities.FileHelper;
 
-import communication.ChannelHandler;
-import communication.FileChannelHandler;
-import communication.SHMChannelHandler;
-import communication.TCPChannelHandler;
+import communication.channel.DistributedFileInputChannel;
+import communication.channel.DistributedFileOutputChannel;
+import communication.channel.DistributedFileSplitInputChannel;
+import communication.channel.SHMInputChannel;
+import communication.channel.SHMOutputChannel;
+import communication.channel.TCPInputChannel;
+import communication.channel.TCPOutputChannel;
 
-import appspecs.exceptions.InexistentInputException;
 import appspecs.exceptions.OverlappingOutputException;
 
 public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
@@ -23,8 +25,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private Set<Node> initials;
 	private Set<Node> finals;
 
-	private String name;
-	private String directoryPrefix;
+	//Base dir for the application will be directoryPrefix/name in the DFS.
+	private final String name;
+	private final String poolName;
+	private final String directoryPrefix;
 
 	private Set<String> outputFilenames;
 
@@ -33,11 +37,12 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	protected String nameGenerationString = "node-";
 	protected long nameGenerationCounter = 0L;
-
-	public ApplicationSpecification(String name, String directoryPrefix) {
+	
+	public ApplicationSpecification(String name, String poolName, String directoryPrefix) {
 		super(Edge.class);
 
 		this.name = name;
+		this.poolName = poolName;
 		this.directoryPrefix = directoryPrefix;
 
 		initials = new HashSet<Node>();
@@ -46,8 +51,13 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		outputFilenames = new HashSet<String>();
 	}
 
+	public ApplicationSpecification(String name, String directoryPrefix)
+	{
+		this(name, "default_pool", directoryPrefix);
+	}
+	
 	public ApplicationSpecification() {
-		this("default_application", "/cluserdata");
+		this("default_application", "default_pool", "/Hammr");
 	}
 
 	public ApplicationSpecification(String name, String directoryPrefix, Node[] nodes, Edge[] edges) {
@@ -56,11 +66,14 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		insertNodes(nodes);
 		insertEdges(edges);
 	}
-
+	
+	public final String getPoolName(){
+		return poolName;
+	}
+	
 	public void insertNodes(Node[] nodes) {
 		for(Node node: nodes) {
 			node.setName(generateUniqueName());
-
 			addVertex(node);
 		}
 	}
@@ -113,17 +126,22 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
-	public void addInitial(Node node, String filename) throws InexistentInputException {
-		if(!FileHelper.exists(getAbsoluteFileName(filename))) {
-			throw new InexistentInputException(getAbsoluteFileName(filename));
-		}
-
+	public void addInitial(Node node, String filename, long start, long end)
+	{
 		node.setType(NodeType.INITIAL);
-		node.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, "input-" + (inputCounter++), getAbsoluteFileName(filename)));
+		node.addInputChannel(new DistributedFileSplitInputChannel("input-" + (inputCounter++), getAbsoluteFileName(filename), start, end));
 
 		initials.add(node);
 	}
 
+	public void addInitial(Node node, String filename)
+	{
+		node.setType(NodeType.INITIAL);
+		node.addInputChannel(new DistributedFileInputChannel("input-" + (inputCounter++), getAbsoluteFileName(filename)));
+		
+		initials.add(node);
+	}
+	
 	public Set<Node> getInitials() {
 		return initials;
 	}
@@ -140,7 +158,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		outputFilenames.add(filename);
 
 		node.setType(NodeType.FINAL);
-		node.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, "output-" + (outputCounter++), getAbsoluteFileName(filename)));
+		node.addOutputChannel(new DistributedFileOutputChannel("output-" + (outputCounter++), getAbsoluteFileName(filename)));
 
 		finals.add(node);
 	}
@@ -153,16 +171,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		this.finals = finals;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getName() {
 		return name;
-	}
-
-	public void setDirectoryPrefix(String directoryPrefix) {
-		this.directoryPrefix = directoryPrefix;
 	}
 
 	public String getDirectoryPrefix() {
@@ -222,21 +232,27 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 			switch(edge.getCommunicationMode()) {
 			case SHM:
-				source.addOutputChannelHandler(new SHMChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName()));
-				target.addInputChannelHandler(new SHMChannelHandler(ChannelHandler.Mode.INPUT, source.getName()));
+				source.addOutputChannel(new SHMOutputChannel(target.getName()));
+				target.addInputChannel(new SHMInputChannel(source.getName()));
 				break;
 			case TCP:
-				source.addOutputChannelHandler(new TCPChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName()));
-				target.addInputChannelHandler(new TCPChannelHandler(ChannelHandler.Mode.INPUT, source.getName()));
+				source.addOutputChannel(new TCPOutputChannel(target.getName()));
+				target.addInputChannel(new TCPInputChannel(source.getName()));
 				break;
 			case FILE:
-				source.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
-				target.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, source.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
+				//source.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
+				//target.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, source.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
 
+				String filePath = this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat";
+				
+				source.addOutputChannel(new DistributedFileOutputChannel(target.getName(), filePath));
+				target.addInputChannel(new DistributedFileInputChannel(source.getName(), filePath));
+				
 				anonymousFileChannelCounter++;
 
 				break;
 			}
 		}
+		
 	}
 }

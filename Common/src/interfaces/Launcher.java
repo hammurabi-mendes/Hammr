@@ -35,4 +35,12 @@ public interface Launcher extends Remote {
 	 * @return The current running NodeGroups.
 	 */
 	public List<NodeGroup> getNodeGroups() throws RemoteException;
+	
+	/**
+	 * Obtains the current status. Called by the manager
+	 * @return
+	 * @throws RemoteException
+	 */
+	
+	public LauncherStatus getStatus() throws RemoteException;
 }
