@@ -28,9 +28,9 @@ import interfaces.Manager;
 import appspecs.ApplicationSpecification;
 import appspecs.Node;
 
+import nodes.ReaderSomeoneWriterSomeone;
 import nodes.TrivialNode;
 
-import programs.ReaderSomeoneWriterSomeone;
 
 import utilities.RMIHelper;
 

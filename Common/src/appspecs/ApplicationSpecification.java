@@ -13,14 +13,19 @@ package appspecs;
 
 import java.util.Iterator;
 
-import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
 
 import java.util.Map;
 import java.util.HashMap;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import org.jgrapht.graph.*;
+
+import utilities.FileHelper;
 
 import communication.ChannelHandler;
 import communication.FileChannelHandler;
@@ -36,12 +41,12 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	protected String name;
 	protected String directoryPrefix;
 
-	protected Map<String, Input> inputs;
-	protected Map<String, Output> outputs;
+	protected Map<String, Set<FileChannelHandler>> inputs;
+	protected Map<String, FileChannelHandler> outputs;
 
 	protected Set<Node> fileConsumers;
 	protected Set<Node> fileProducers;
-	
+
 	protected Decider decider;
 
 	protected String nameGenerationString = "node-";
@@ -56,8 +61,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		fileConsumers = new HashSet<Node>();
 		fileProducers = new HashSet<Node>();
 
-		inputs = new HashMap<String, Input>();
-		outputs = new HashMap<String, Output>();
+		inputs = new HashMap<String, Set<FileChannelHandler>>();
+		outputs = new HashMap<String, FileChannelHandler>();
 	}
 
 	public ApplicationSpecification() {
@@ -146,21 +151,20 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	public void addInput(Node node, String filename) {
 		String absoluteFileName = getAbsoluteFileName(filename);
 
-		Input input = inputs.get(absoluteFileName);
-
-		if(input == null) {
-			input = new Input(new FileChannelHandler(ChannelHandler.Mode.INPUT, filename, absoluteFileName));
+		if(inputs.get(absoluteFileName) == null) {
+			inputs.put(absoluteFileName, new HashSet<FileChannelHandler>());
 		}
 
-		node.addInputChannelHandler(input.getChannelHandler());
-		input.addConsumer(node);
+		FileChannelHandler inputChannelHandler = new FileChannelHandler(ChannelHandler.Mode.INPUT, filename, absoluteFileName);
 
-		inputs.put(absoluteFileName, input);
+		node.addInputChannelHandler(inputChannelHandler);
+
+		inputs.get(absoluteFileName).add(inputChannelHandler);
 		fileConsumers.add(node);
 	}
 
-	public Collection<Input> getInputs() {
-		return inputs.values();
+	public Set<String> getInputFilenames() {
+		return inputs.keySet();
 	}
 
 	public Set<Node> getFileConsumers() {
@@ -170,21 +174,20 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	public void addOutput(Node node, String filename) throws OverlapingFilesException {
 		String absoluteFileName = getAbsoluteFileName(filename);
 
-		if(outputs.containsKey(absoluteFileName)) {
+		if(outputs.get(absoluteFileName) != null) {
 			throw new OverlapingFilesException(absoluteFileName);
 		}
 
-		Output output = new Output(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, filename, absoluteFileName));
+		FileChannelHandler outputChannelHandler = new FileChannelHandler(ChannelHandler.Mode.OUTPUT, filename, absoluteFileName);
 
-		node.addOutputChannelHandler(output.getChannelHandler());
-		output.setProducer(node);
+		node.addOutputChannelHandler(outputChannelHandler);
 
-		outputs.put(absoluteFileName, output);
+		outputs.put(absoluteFileName, outputChannelHandler);
 		fileProducers.add(node);
 	}
 
-	public Collection<Output> getOutputs() {
-		return outputs.values();
+	public Set<String> getOutputFilenames() {
+		return outputs.keySet();
 	}
 
 	public Set<Node> getFileProducers() {
@@ -240,11 +243,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	public void finalize() throws OverlapingFilesException {
 		// Check if input or output filenames overlap
 
-		for(Input input: inputs.values()) {
-			for(Output output: outputs.values()) {
-				String inputFilename = input.getChannelHandler().getLocation();
-				String outputFilename = output.getChannelHandler().getLocation();
-
+		for(String inputFilename: getInputFilenames()) {
+			for(String outputFilename: getOutputFilenames()) {
 				if(inputFilename.equals(outputFilename)) {
 					throw new OverlapingFilesException(inputFilename);
 				}
@@ -276,6 +276,24 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 				break;
 			}
+		}
+	}
+
+	public void relinkOutputsInputs() {
+		List<String> inputFilenames = new ArrayList<String>(getInputFilenames());
+		List<String> outputFilenames = new ArrayList<String>(getOutputFilenames());
+
+		List<Node> listFileConsumers = new ArrayList<Node>(fileConsumers);
+
+		Collections.shuffle(inputFilenames);
+		Collections.shuffle(outputFilenames);
+
+		Collections.shuffle(listFileConsumers);
+
+		int minimum = Math.min(inputFilenames.size(), outputFilenames.size());
+
+		for(int i = 0; i < minimum; i++) {
+			FileHelper.move(outputFilenames.get(i), inputFilenames.get(i));
 		}
 	}
 }

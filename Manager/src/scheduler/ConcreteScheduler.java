@@ -41,8 +41,6 @@ import appspecs.ApplicationSpecification;
 import appspecs.Decider;
 import appspecs.Node;
 import appspecs.Edge;
-import appspecs.Input;
-import appspecs.Output;
 
 import utilities.FileHelper;
 import utilities.MutableInteger;
@@ -337,9 +335,9 @@ public class ConcreteScheduler implements Scheduler {
 
 		List<String> missingInputs = new ArrayList<String>();;
 
-		for(Input input: applicationSpecification.getInputs()) {
-			if(!FileHelper.exists(input.getChannelHandler().getLocation())) {
-				missingInputs.add(input.getChannelHandler().getLocation());
+		for(String input: applicationSpecification.getInputFilenames()) {
+			if(!FileHelper.exists(input)) {
+				missingInputs.add(input);
 			}
 		}
 
@@ -389,9 +387,9 @@ public class ConcreteScheduler implements Scheduler {
 
 		List<String> missingOutputs = new ArrayList<String>();;
 
-		for(Output output: applicationSpecification.getOutputs()) {
-			if(!FileHelper.exists(output.getChannelHandler().getLocation())) {
-				missingOutputs.add(output.getChannelHandler().getLocation());
+		for(String output: applicationSpecification.getOutputFilenames()) {
+			if(!FileHelper.exists(output)) {
+				missingOutputs.add(output);
 			}
 		}
 
