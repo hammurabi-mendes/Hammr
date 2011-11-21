@@ -13,16 +13,25 @@ package launcher;
 
 import java.util.Collections;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 
 import execinfo.NodeGroup;
 
+import utilities.Logging;
 import utilities.RMIHelper;
 
 import interfaces.Launcher;
+import interfaces.LauncherStatus;
 import interfaces.Manager;
 
 /**
@@ -31,11 +40,43 @@ import interfaces.Manager;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ConcreteLauncher implements Launcher {
+	private static ConcreteLauncher singleton = null;
+	private static Manager manager;
+	
+	private String _hostName;
 	private String id;
-	private Manager manager;
 
-	private List<NodeGroup> nodeGroups;
+	private ExecutorService threadPool = Executors.newCachedThreadPool();
+	
+	// group of running nodes
+	private final Map<String, NodeGroup> nodeGroups = new ConcurrentHashMap<String, NodeGroup>();
+	private LauncherStatus status = null;
 
+	/**
+	 * Launcher initialization routine
+	 */
+	static {
+		Logging.Info("[ConcreteLauncher] Initializing ConcreteLauncher singleton...");
+		String rmiRegistryLoc = System.getProperty("java.rmi.server.location");
+		Logging.Info("[ConcreteLauncher] RMI Registry: " + rmiRegistryLoc);
+		try {
+			singleton = new ConcreteLauncher(rmiRegistryLoc);
+			RMIHelper.exportRemoteObject(singleton);
+		} catch (RemoteException exception) {
+			Logging.Info("[ConcreteLauncher] Unable to contact manager");
+			System.exit(1);
+		}
+		singleton.registerLauncher();
+		Logging.Info(String.format("[ConcreteLauncher] Launcher %s started.", singleton.getId()));
+	}
+	
+	public static ConcreteLauncher getInstance() {
+		return singleton;
+	}
+	
+	public static Manager getManager() {
+		return manager;
+	}
 	/**
 	 * Constructor method.
 	 * 
@@ -44,11 +85,19 @@ public class ConcreteLauncher implements Launcher {
 	 * @throws RemoteException If unable to contact either the registry or the manager.
 	 */
 	public ConcreteLauncher(String registryLocation) throws RemoteException {
-		id = "Launcher".concat(RMIHelper.getUniqueID());
+		// Use hostname as id;
+		try {
+			_hostName = InetAddress.getLocalHost().getHostName();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		id = _hostName;
 
 		manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
-
-		nodeGroups = Collections.synchronizedList(new ArrayList<NodeGroup>());
+		
+		status = new LauncherStatus(id, _hostName, "default_rack");
 	}
 
 	/**
@@ -85,12 +134,21 @@ public class ConcreteLauncher implements Launcher {
 	 * @return Always true.
 	 */
 	public boolean addNodeGroup(NodeGroup nodeGroup) {
-		nodeGroups.add(nodeGroup);
+		nodeGroups.put(nodeGroup.getId(), nodeGroup);
 
-		ExecutionHandler executionHandler = new ExecutionHandler(manager, this, nodeGroup);
-
-		executionHandler.start();
-
+		Logging.Info("[ConcreteLauncher][addNodeGroup] Creating executor for node group:" + nodeGroup + ". Id: "
+				+ nodeGroup.getId());
+		ExecutionHandler executionHandler = new ExecutionHandler(nodeGroup);
+		threadPool.execute(executionHandler);
+		
+		// Update Launcher Status
+		synchronized (status) {
+			int size = nodeGroup.getSize();
+			status.ocupiedSlots += size;
+//			if (nodeGroup.getNodeGroupBundle().size() == 1)
+//				status.blockableSlots += size;
+		}
+		
 		return true;
 	}
 
@@ -102,7 +160,15 @@ public class ConcreteLauncher implements Launcher {
 	 * @return True if the NodeGroup informed was previously present in the list of running NodeGroups.
 	 */
 	public boolean delNodeGroup(NodeGroup nodeGroup) {
-		return nodeGroups.remove(nodeGroup);
+		// Update Launcher Status
+		synchronized (status) {
+			int size = nodeGroup.getSize();
+			status.ocupiedSlots -= nodeGroup.getSize();
+//			if (nodeGroup.getNodeGroupBundle().size() == 1)
+//				status.blockableSlots -= size;
+		}
+		nodeGroups.remove(nodeGroup.getId());
+		return true;
 	}
 
 	/**
@@ -110,41 +176,16 @@ public class ConcreteLauncher implements Launcher {
 	 * 
 	 * @return The current running NodeGroups.
 	 */
-	public List<NodeGroup> getNodeGroups() {
-		return nodeGroups;
+	@Override
+	public List<NodeGroup> getNodeGroups() throws RemoteException {
+		return new ArrayList<NodeGroup>(nodeGroups.values());
 	}
 
-	/**
-	 * Launcher startup method.
-	 * 
-	 * @param arguments A list containing:
-	 *        1) The registry location.
-	 */
+	@Override
+	public LauncherStatus getStatus() throws RemoteException {
+		return status;
+	}
+
 	public static void main(String[] arguments) {
-		if(arguments.length != 1) {
-			System.err.println("Usage: ConcreteLauncher <registry_location>");
-
-			System.exit(1);
-		}
-
-		String registryLocation = arguments[0];
-
-		ConcreteLauncher concreteLauncher;
-
-		try {
-			// Initiates a concrete launcher and makes it available
-			// for remote method calls.
-			
-			concreteLauncher = new ConcreteLauncher(registryLocation);
-
-			RMIHelper.exportRemoteObject(concreteLauncher);
-		} catch (RemoteException exception) {
-			System.err.println("Unable to contact manager");
-
-			System.exit(1);
-			return;
-		}
-
-		concreteLauncher.registerLauncher();
 	}
 }

@@ -27,10 +27,13 @@ import org.jgrapht.graph.*;
 
 import utilities.FileHelper;
 
-import communication.ChannelHandler;
-import communication.FileChannelHandler;
-import communication.SHMChannelHandler;
-import communication.TCPChannelHandler;
+import communication.channel.FileInputChannel;
+import communication.channel.FileOutputChannel;
+import communication.channel.SHMInputChannel;
+import communication.channel.SHMOutputChannel;
+import communication.channel.TCPInputChannel;
+import communication.channel.TCPOutputChannel;
+
 
 import enums.CommunicationType;
 import exceptions.OverlapingFilesException;
@@ -41,8 +44,9 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	protected String name;
 	protected String directoryPrefix;
 
-	protected Map<String, Set<FileChannelHandler>> inputs;
-	protected Map<String, FileChannelHandler> outputs;
+	protected Map<String, Set<FileInputChannel>> inputs;
+	protected Map<String, FileOutputChannel> outputs;
+
 
 	protected Set<Node> fileConsumers;
 	protected Set<Node> fileProducers;
@@ -51,8 +55,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	protected String nameGenerationString = "node-";
 	protected long nameGenerationCounter = 0L;
-
-	public ApplicationSpecification(String name, String directoryPrefix) {
+	
+	public ApplicationSpecification(String name, String poolName, String directoryPrefix) {
 		super(Edge.class);
 
 		this.name = name;
@@ -61,10 +65,15 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		fileConsumers = new HashSet<Node>();
 		fileProducers = new HashSet<Node>();
 
-		inputs = new HashMap<String, Set<FileChannelHandler>>();
-		outputs = new HashMap<String, FileChannelHandler>();
+		inputs = new HashMap<String, Set<FileInputChannel>>();
+		outputs = new HashMap<String, FileOutputChannel>();
 	}
 
+	public ApplicationSpecification(String name, String directoryPrefix)
+	{
+		this(name, "default_pool", directoryPrefix);
+	}
+	
 	public ApplicationSpecification() {
 		this("default_application", "/userdata");
 	}
@@ -75,7 +84,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		insertNodes(nodes);
 		insertEdges(edges);
 	}
-
+	
 	public void setName(String name) {
 		this.name = name;
 	}
@@ -92,10 +101,17 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return directoryPrefix;
 	}
 
+	public Decider getDecider() {
+		return decider;
+	}
+
+	public void setDecider(Decider decider) {
+		this.decider = decider;
+	}
+
 	public void insertNodes(Node[] nodes) {
 		for(Node node: nodes) {
 			node.setName(generateUniqueName());
-
 			addVertex(node);
 		}
 	}
@@ -147,17 +163,19 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 			incorporateGraph(other);
 		}
 	}
-
-	public void addInput(Node node, String filename) {
+	
+	public void addInput(Node node, String filename)
+	{
 		String absoluteFileName = getAbsoluteFileName(filename);
 
 		if(inputs.get(absoluteFileName) == null) {
-			inputs.put(absoluteFileName, new HashSet<FileChannelHandler>());
+			inputs.put(absoluteFileName, new HashSet<FileInputChannel>());
 		}
 
-		FileChannelHandler inputChannelHandler = new FileChannelHandler(ChannelHandler.Mode.INPUT, filename, absoluteFileName);
+		
+		FileInputChannel inputChannelHandler = new FileInputChannel(filename, absoluteFileName);
 
-		node.addInputChannelHandler(inputChannelHandler);
+		node.addInputChannel(inputChannelHandler);
 
 		inputs.get(absoluteFileName).add(inputChannelHandler);
 		fileConsumers.add(node);
@@ -174,32 +192,24 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	public void addOutput(Node node, String filename) throws OverlapingFilesException {
 		String absoluteFileName = getAbsoluteFileName(filename);
 
-		if(outputs.get(absoluteFileName) != null) {
+		if (outputs.get(absoluteFileName) != null) {
 			throw new OverlapingFilesException(absoluteFileName);
 		}
 
-		FileChannelHandler outputChannelHandler = new FileChannelHandler(ChannelHandler.Mode.OUTPUT, filename, absoluteFileName);
+		FileOutputChannel outputChannelHandler = new FileOutputChannel(filename, absoluteFileName);
 
-		node.addOutputChannelHandler(outputChannelHandler);
+		node.addOutputChannel(outputChannelHandler);
 
 		outputs.put(absoluteFileName, outputChannelHandler);
 		fileProducers.add(node);
 	}
-
+	
 	public Set<String> getOutputFilenames() {
 		return outputs.keySet();
 	}
 
 	public Set<Node> getFileProducers() {
 		return fileProducers;
-	}
-
-	public Decider getDecider() {
-		return decider;
-	}
-
-	public void setDecider(Decider decider) {
-		this.decider = decider;
 	}
 
 	public String getAbsoluteDirectory() {
@@ -261,22 +271,25 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 			switch(edge.getCommunicationMode()) {
 			case SHM:
-				source.addOutputChannelHandler(new SHMChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName()));
-				target.addInputChannelHandler(new SHMChannelHandler(ChannelHandler.Mode.INPUT, source.getName()));
+				source.addOutputChannel(new SHMOutputChannel(target.getName()));
+				target.addInputChannel(new SHMInputChannel(source.getName()));
 				break;
 			case TCP:
-				source.addOutputChannelHandler(new TCPChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName()));
-				target.addInputChannelHandler(new TCPChannelHandler(ChannelHandler.Mode.INPUT, source.getName()));
+				source.addOutputChannel(new TCPOutputChannel(target.getName()));
+				target.addInputChannel(new TCPInputChannel(source.getName()));
 				break;
 			case FILE:
-				source.addOutputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.OUTPUT, target.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
-				target.addInputChannelHandler(new FileChannelHandler(ChannelHandler.Mode.INPUT, source.getName(), this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat"));
-
+				String filePath = this.getAbsoluteDirectory() + "/" + "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat";
+				
+				source.addOutputChannel(new FileOutputChannel(target.getName(), filePath));
+				target.addInputChannel(new FileInputChannel(source.getName(), filePath));
+				
 				anonymousFileChannelCounter++;
 
 				break;
 			}
 		}
+		
 	}
 
 	public void relinkOutputsInputs() {

@@ -9,12 +9,37 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-package communication;
+package communication.writer;
 
 import java.io.IOException;
 
-public interface ChannelElementWriter {
-	public abstract boolean write(ChannelElement channelElement) throws IOException;
-	public abstract boolean flush() throws IOException;
-	public abstract boolean close() throws IOException;
+import communication.channel.ChannelElement;
+import communication.stream.ChannelElementOutputStream;
+
+public final class FileChannelElementWriter implements ChannelElementWriter {
+	private final ChannelElementOutputStream channelElementOutputStream;
+	
+	public FileChannelElementWriter(ChannelElementOutputStream oStream) throws IOException 
+	{
+		channelElementOutputStream = oStream;
+	}
+
+	@Override
+	public synchronized boolean write(ChannelElement channelElement) throws IOException {
+		channelElementOutputStream.writeChannelElement(channelElement);
+		return true;
+	}
+
+	@Override
+	public synchronized boolean flush() throws IOException {
+		channelElementOutputStream.flush();
+		return true;
+	}
+
+	@Override
+	public synchronized boolean close() throws IOException {
+		channelElementOutputStream.flush();
+		channelElementOutputStream.close();
+		return true;
+	}
 }

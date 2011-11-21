@@ -11,6 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package mapreduce.appspecs;
 
+import utilities.DistributedFileSystemFactory;
+import mapreduce.programs.Mapper;
 import enums.CommunicationType;
 import exceptions.InexistentInputException;
 import exceptions.OverlapingFilesException;
@@ -28,8 +30,8 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	private Node[] mergeStage;
 
-	public MapReduceSpecification(String name, String directoryPrefix) {
-		super(name, directoryPrefix);
+	public MapReduceSpecification(String name, String userPoolName, String directoryPrefix) {
+		super(name, userPoolName, directoryPrefix);
 	}
 
 	public void insertMappers(String input, Node splitter, Node[] mappers) throws InexistentInputException {
@@ -44,8 +46,8 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	public void insertMappers(String[] inputs, Node[] mappers) throws InexistentInputException {
 		stageMappers(mappers);
-
-		for(int i = 0; i < inputs.length; i++) {
+		for(int i = 0; i < inputs.length; ++i)
+		{
 			addInput(mappers[i], inputs[i]);
 		}
 	}
@@ -63,7 +65,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 	public void insertReducers(String[] outputs, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
-		for(int i = 0; i < outputs.length; i++) {
+		for (int i = 0; i < outputs.length; i++) {
 			addOutput(reducers[i], outputs[i]);
 		}
 	}
@@ -116,12 +118,12 @@ public class MapReduceSpecification extends ApplicationSpecification {
 	}
 
 	private void setupMapperNaming() {
-		nameGenerationString = "mapper-";
+		nameGenerationString = getName() + "-mapper-";
 		nameGenerationCounter = 0L;
 	}
 
 	private void setupReducerNaming() {
-		nameGenerationString = "reducer-";
+		nameGenerationString = getName() + "-reducer-";
 		nameGenerationCounter = 0L;
 	}
 

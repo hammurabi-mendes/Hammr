@@ -13,6 +13,9 @@ package launcher;
 
 import java.util.Iterator;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -23,30 +26,34 @@ import java.lang.management.ThreadMXBean;
 
 import java.net.InetSocketAddress;
 
+
+import utilities.DistributedFileSystemFactory;
+import utilities.Logging;
+
 import appspecs.Node;
 
-import enums.CommunicationType;
 
 import execinfo.NodeGroup;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
 
-import communication.ChannelHandler;
-
-import communication.SHMChannelHandler;
-import communication.TCPChannelHandler;
-import communication.FileChannelHandler;
-
-import communication.SHMChannelElementMultiplexer;
-import communication.SHMChannelElementWriter;
-
-import communication.TCPChannelElementMultiplexer;
-import communication.TCPChannelElementWriter;
-
-import communication.FileChannelElementReader;
-import communication.FileChannelElementWriter;
-
-import interfaces.Manager;
+import communication.channel.FileInputChannel;
+import communication.channel.FileOutputChannel;
+import communication.channel.HDFSFileInputChannel;
+import communication.channel.InputChannel;
+import communication.channel.OutputChannel;
+import communication.channel.SHMInputChannel;
+import communication.channel.SHMOutputChannel;
+import communication.channel.TCPInputChannel;
+import communication.channel.TCPOutputChannel;
+import communication.reader.FileChannelElementReader;
+import communication.reader.SHMChannelElementMultiplexer;
+import communication.reader.TCPChannelElementMultiplexer;
+import communication.stream.ChannelElementOutputStream;
+import communication.writer.ChannelElementWriter;
+import communication.writer.FileChannelElementWriter;
+import communication.writer.SHMChannelElementWriter;
+import communication.writer.TCPChannelElementWriter;
 
 import exceptions.InexistentApplicationException;
 
@@ -56,12 +63,8 @@ import exceptions.InexistentApplicationException;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ExecutionHandler extends Thread {
-	private Manager manager;
-
-	private ConcreteLauncher concreteLauncher;
-
 	private NodeGroup nodeGroup;
-
+	
 	/**
 	 * Constructor.
 	 * 
@@ -69,11 +72,7 @@ public class ExecutionHandler extends Thread {
 	 * @param concreteLauncher Reference to the local launcher.
 	 * @param nodeGroup NodeGroup that should be run.
 	 */
-	public ExecutionHandler(Manager manager, ConcreteLauncher concreteLauncher, NodeGroup nodeGroup) {
-		this.manager = manager;
-
-		this.concreteLauncher = concreteLauncher;
-
+	public ExecutionHandler(NodeGroup nodeGroup) {
 		this.nodeGroup = nodeGroup;
 	}
 
@@ -103,6 +102,8 @@ public class ExecutionHandler extends Thread {
 		// at the end of the execution.
 		ResultSummary resultSummary;
 
+		Logging.Info("[ExecutionHandler] " + nodeGroup + " setup communication...");
+		
 		try {
 			setupCommunication();
 		} catch (Exception genericException) {
@@ -117,7 +118,11 @@ public class ExecutionHandler extends Thread {
 			return;
 		}
 
+		Logging.Info("[ExecutionHandler] " + nodeGroup + " communication setup complete.");
+
 		resultSummary = performExecution();
+
+		Logging.Info("[ExecutionHandler] " + nodeGroup + " finished.");
 
 		finishExecution(resultSummary);
 	}
@@ -134,21 +139,22 @@ public class ExecutionHandler extends Thread {
 	 */
 	private void setupCommunication() throws Exception {
 		// Create all the pipe handlers
-		// If two pipe edges target the same node, only one pipe handler (and corresponding physical pipe) will be created
+		// If two pipe edges target the same node, only one pipe handler (and
+		// corresponding physical pipe) will be created
 
 		Map<String, SHMChannelElementMultiplexer> mapChannelElementOutputStream = new HashMap<String, SHMChannelElementMultiplexer>();
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			SHMChannelElementMultiplexer shmChannelElementMultiplexer = null;
+			for (InputChannel channelHandler : node.getInputChannels()) {
+				if (channelHandler instanceof SHMInputChannel) {
+					SHMInputChannel shmChannelHandler = (SHMInputChannel) channelHandler;
 
-			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.SHM) {
-					SHMChannelHandler shmChannelHandler = (SHMChannelHandler) channelHandler;
-
-					if(shmChannelElementMultiplexer == null) {
+					if (shmChannelElementMultiplexer == null) {
 						shmChannelElementMultiplexer = new SHMChannelElementMultiplexer(node.getInputChannelNames());
 
-						// For SHM, when creating the input pipe, map the associated output pipe for other nodes
+						// For SHM, when creating the input pipe, map the
+						// associated output pipe for other nodes
 						mapChannelElementOutputStream.put(node.getName(), shmChannelElementMultiplexer);
 					}
 
@@ -158,14 +164,16 @@ public class ExecutionHandler extends Thread {
 			}
 		}
 
-		for(Node node: nodeGroup.getNodes()) {
-			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.SHM) {
-					SHMChannelHandler shmChannelHandler = (SHMChannelHandler) channelHandler;
+		for (Node node : nodeGroup.getNodes()) {
+			for (OutputChannel channelHandler : node.getOutputChannels()) {
+				if (channelHandler instanceof SHMOutputChannel) {
+					SHMOutputChannel shmChannelHandler = (SHMOutputChannel) channelHandler;
 
-					// For SHM, all the outputs go to the unique output pipe for each node
+					// For SHM, all the outputs go to the unique output pipe for
+					// each node
 
-					SHMChannelElementWriter shmChannelElementWriter = new SHMChannelElementWriter(node.getName(), mapChannelElementOutputStream.get(channelHandler.getName()));
+					SHMChannelElementWriter shmChannelElementWriter = new SHMChannelElementWriter(node.getName(),
+							mapChannelElementOutputStream.get(channelHandler.getName()));
 
 					shmChannelHandler.setChannelElementWriter(shmChannelElementWriter);
 				}
@@ -173,53 +181,60 @@ public class ExecutionHandler extends Thread {
 		}
 
 		// Create all the TCP handlers
-		// If two TCP edges target the same node, only one TCP handler (and corresponding server) will be created
+		// If two TCP edges target the same node, only one TCP handler (and
+		// corresponding server) will be created
 
-		for(Node node: nodeGroup.getNodes()) {
+		for (Node node : nodeGroup.getNodes()) {
 			TCPChannelElementMultiplexer tcpChannelElementMultiplexer = null;
 
-			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.TCP) {
-					TCPChannelHandler tcpChannelHandler = (TCPChannelHandler) channelHandler;
+			for (InputChannel channelHandler : node.getInputChannels()) {
+				if (channelHandler instanceof TCPInputChannel) {
+					TCPInputChannel tcpChannelHandler = (TCPInputChannel) channelHandler;
 
-					if(tcpChannelElementMultiplexer == null) {
+					if (tcpChannelElementMultiplexer == null) {
 						tcpChannelElementMultiplexer = new TCPChannelElementMultiplexer(node.getInputChannelNames());
 
 						tcpChannelHandler.setSocketAddress(tcpChannelElementMultiplexer.getAddress());
 
-						// For TCP, when creating the input server, map the associated output server addresses for other nodes
-						boolean result = manager.insertSocketAddress(nodeGroup.getApplication(), node.getName(), tcpChannelHandler.getSocketAddress());
+						// For TCP, when creating the input server, map the
+						// associated output server addresses for other nodes
+						boolean result = ConcreteLauncher.getManager().insertSocketAddress(nodeGroup.getApplication(),
+								node.getName(), tcpChannelHandler.getSocketAddress());
 
-						if(result == false) {
-							System.err.println("Unable to insert socket address for application " + nodeGroup.getApplication() + " on the manager!");
+						if (result == false) {
+							Logging.Info("Unable to insert socket address for application "
+									+ nodeGroup.getApplication() + " on the manager!");
 
 							throw new InexistentApplicationException(nodeGroup.getApplication());
 						}
 					}
-
 					// For TCP, all the inputs come from the unique input server
 					tcpChannelHandler.setChannelElementReader(tcpChannelElementMultiplexer);
 				}
 			}
 		}
 
-		for(Node node: nodeGroup.getNodes()) {
-			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.TCP) {
-					TCPChannelHandler tcpChannelHandler = (TCPChannelHandler) channelHandler;
+		for (Node node : nodeGroup.getNodes()) {
+			for (OutputChannel channelHandler : node.getOutputChannels()) {
+				if (channelHandler instanceof TCPOutputChannel) {
+					TCPOutputChannel tcpChannelHandler = (TCPOutputChannel) channelHandler;
 
-					// For TCP, (1) obtain the address of the output server from the manager
-					InetSocketAddress socketAddress = manager.obtainSocketAddress(nodeGroup.getApplication(), tcpChannelHandler.getName());
+					// For TCP, (1) obtain the address of the output server from
+					// the manager
+					InetSocketAddress socketAddress = ConcreteLauncher.getManager().obtainSocketAddress(
+							nodeGroup.getApplication(), tcpChannelHandler.getName());
 
-					if(socketAddress == null) {
+					if (socketAddress == null) {
 						throw new InexistentApplicationException(nodeGroup.getApplication());
 					}
 
 					tcpChannelHandler.setSocketAddress(socketAddress);
 
-					// For TCP, (2) all the outputs go to the unique server for each node
+					// For TCP, (2) all the outputs go to the unique server for
+					// each node
 
-					TCPChannelElementWriter tcpChannelElementWriter = new TCPChannelElementWriter(node.getName(), socketAddress);
+					TCPChannelElementWriter tcpChannelElementWriter = new TCPChannelElementWriter(node.getName(),
+							socketAddress);
 
 					tcpChannelHandler.setChannelElementWriter(tcpChannelElementWriter);
 				}
@@ -227,28 +242,36 @@ public class ExecutionHandler extends Thread {
 		}
 
 		// Create all the file handlers
-		// If more than one file edge target the same node, more than one file handler (and corresponding file descriptor) will be created
-
-		for(Node node: nodeGroup.getNodes()) {
-			for(ChannelHandler channelHandler: node.getInputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.FILE) {
-					FileChannelHandler fileChannelHandler = (FileChannelHandler) channelHandler;
-
-					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(fileChannelHandler.getLocation());
-
+		// If more than one file edge target the same node, more than one file
+		// handler (and corresponding file descriptor) will be created
+		for (Node node : nodeGroup.getNodes()) {
+			for (InputChannel channelHandler : node.getInputChannels()) {
+				if (channelHandler instanceof FileInputChannel) {
+					FileInputChannel fileChannelHandler = (FileInputChannel) channelHandler;
+					FileChannelElementReader fileChannelElementReader = new FileChannelElementReader(fileChannelHandler.getFileInfo());
 					fileChannelHandler.setChannelElementReader(fileChannelElementReader);
 				}
 			}
 
-			for(ChannelHandler channelHandler: node.getOutputChannelHandlers()) {
-				if(channelHandler.getType() == CommunicationType.FILE) {
-					FileChannelHandler fileChannelHandler = (FileChannelHandler) channelHandler;
+			for (OutputChannel channelHandler : node.getOutputChannels()) {
+				if (channelHandler instanceof FileOutputChannel) {
+					FileOutputChannel fileChannelHandler = (FileOutputChannel) channelHandler;
+					ChannelElementOutputStream oStream = new ChannelElementOutputStream(fileChannelHandler.getFileInfo());
 
-					FileChannelElementWriter fileChannelElementWriter = new FileChannelElementWriter(fileChannelHandler.getLocation());
+					ChannelElementWriter channelElementWriter = new FileChannelElementWriter(oStream);
 
-					fileChannelHandler.setChannelElementWriter(fileChannelElementWriter);
+					fileChannelHandler.setChannelElementWriter(channelElementWriter);
 				}
 			}
+		}
+
+		for (Node node : nodeGroup.getNodes()) {
+			/*
+			 * Don't create readersShuffler here. ReadersShuffler should be
+			 * created in a lazy fashion.
+			 */
+			// node.createReadersShuffler();
+			node.createWritersShuffler();
 		}
 	}
 
@@ -258,6 +281,7 @@ public class ExecutionHandler extends Thread {
 	 * @return Result summary to send back to the master.
 	 */
 	private ResultSummary performExecution() {
+		Logging.Info("[ExecutionHandler][performExecution] ");
 		NodeHandler[] nodeHandlers = new NodeHandler[nodeGroup.getSize()];
 
 		Iterator<Node> iterator = nodeGroup.getNodesIterator();
@@ -282,7 +306,7 @@ public class ExecutionHandler extends Thread {
 		}
 
 		long globalTimerFinish = System.currentTimeMillis();
-
+		
 		ResultSummary resultSummary = new ResultSummary(nodeGroup.getApplication(), nodeGroup.getSerialNumber(), ResultSummary.Type.SUCCESS);
 
 		resultSummary.setNodeGroupTiming(globalTimerFinish - globalTimerStart);
@@ -302,10 +326,10 @@ public class ExecutionHandler extends Thread {
 	 * @return True if the master was properly notified; false otherwise.
 	 */
 	private boolean finishExecution(ResultSummary resultSummary) {
-		concreteLauncher.delNodeGroup(nodeGroup);
+		ConcreteLauncher.getInstance().delNodeGroup(nodeGroup);
 
 		try {
-			manager.handleTermination(resultSummary);
+			ConcreteLauncher.getManager().handleTermination(resultSummary);
 		} catch (RemoteException exception) {
 			System.err.println("Unable to communicate termination to the manager");
 

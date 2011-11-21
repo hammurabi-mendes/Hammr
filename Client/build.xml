@@ -4,21 +4,23 @@
               To include a user specific buildfile here, simply create one in the same
               directory with the processing instruction <?eclipse.ant.import?>
               as the first entry and export the buildfile again. -->
-<project basedir="." default="build" name="Client">
+<project basedir="." default="build" name="Client_1">
     <property environment="env"/>
-    <property name="ECLIPSE_HOME" value="../../../../../../Applications/Eclipse"/>
-    <property name="Common.location" value="../Common"/>
+    <property name="ECLIPSE_HOME" value="../../../../../../usr/lib/eclipse"/>
+    <property name="Common_1.location" value="../Common"/>
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.6"/>
     <property name="source" value="1.6"/>
-    <path id="Common.classpath">
-        <pathelement location="${Common.location}/bin"/>
-        <pathelement location="${Common.location}/../lib/jgrapht-jdk1.6.jar"/>
+    <path id="Common_1.classpath">
+        <pathelement location="${Common_1.location}/bin"/>
+        <pathelement location="${Common_1.location}/../../Hammr/lib/jgrapht-jdk1.6.jar"/>
+        <pathelement location="${Common_1.location}/../../Hammr/lib/commons-logging-1.1.1.jar"/>
+        <pathelement location="${Common_1.location}/../../Hammr/lib/hadoop-core-0.20.2-cdh3u1.jar"/>
     </path>
-    <path id="Client.classpath">
+    <path id="Client_1.classpath">
         <pathelement location="bin"/>
-        <path refid="Common.classpath"/>
-        <pathelement location="../lib/jgrapht-jdk1.6.jar"/>
+        <pathelement location="../../Hammr/lib/jgrapht-jdk1.6.jar"/>
+        <path refid="Common_1.classpath"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -33,11 +35,11 @@
         <delete dir="bin"/>
     </target>
     <target depends="clean" name="cleanall">
-        <ant antfile="build.xml" dir="${Common.location}" inheritAll="false" target="clean"/>
+        <ant antfile="${Common_1.location}/build.xml" dir="${Common_1.location}" inheritAll="false" target="clean"/>
     </target>
     <target depends="build-subprojects,build-project" name="build"/>
     <target name="build-subprojects">
-        <ant antfile="build.xml" dir="${Common.location}" inheritAll="false" target="build-project">
+        <ant antfile="${Common_1.location}/build.xml" dir="${Common_1.location}" inheritAll="false" target="build-project">
             <propertyset>
                 <propertyref name="build.compiler"/>
             </propertyset>
@@ -47,7 +49,7 @@
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source}" target="${target}">
             <src path="src"/>
-            <classpath refid="Client.classpath"/>
+            <classpath refid="Client_1.classpath"/>
         </javac>
     </target>
     <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
@@ -63,29 +65,5 @@
     <target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
         <property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
         <antcall target="build"/>
-    </target>
-    <target name="CountingInputGenerator">
-        <java classname="utilities.counting.CountingInputGenerator" failonerror="true" fork="yes">
-            <arg line="/Users/hmendes/brown/DC/Project/input-mapreduce.txt /Users/hmendes/brown/DC/Project/input-mapreduce.dat"/>
-            <classpath refid="Client.classpath"/>
-        </java>
-    </target>
-    <target name="CountingOutputExtractor">
-        <java classname="utilities.counting.CountingOutputExtractor" failonerror="true" fork="yes">
-            <arg line="/Users/hmendes/brown/DC/Project/output-mapreduce.dat /Users/hmendes/brown/DC/Project/output-mapreduce.txt"/>
-            <classpath refid="Client.classpath"/>
-        </java>
-    </target>
-    <target name="InputGenerator">
-        <java classname="utilities.InputGenerator" failonerror="true" fork="yes">
-            <arg line="/Users/hmendes/brown/DC/Project/input-complete.txt /Users/hmendes/brown/DC/Project/input-complete.dat"/>
-            <classpath refid="Client.classpath"/>
-        </java>
-    </target>
-    <target name="OutputExtractor">
-        <java classname="utilities.OutputExtractor" failonerror="true" fork="yes">
-            <arg line="/Users/hmendes/brown/DC/Project/output-complete.dat /Users/hmendes/brown/DC/Project/output-complete.txt"/>
-            <classpath refid="Client.classpath"/>
-        </java>
     </target>
 </project>

@@ -11,22 +11,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package mapreduce.communication;
 
-import communication.ChannelElement;
+import communication.channel.ChannelElement;
 
-public class MRChannelElement<O,V> extends ChannelElement {
+public class MRChannelElement<K,V> extends ChannelElement {
 	private static final long serialVersionUID = 1L;
 
+	private K key;
 	private V value;
 
-	public MRChannelElement(O object, V value) {
-		super(object, null);
+	public MRChannelElement(K key, V value) {
+		super(null, null);
 
+		this.key = key;
 		this.value = value;
 	}
 
 	@SuppressWarnings("unchecked")
-	public O getObject() {
-		return (O) super.getObject();
+	public K getKey() {
+		return key;
 	}
 
 	public V getValue() {
@@ -35,5 +37,11 @@ public class MRChannelElement<O,V> extends ChannelElement {
 
 	public void setValue(V value) {
 		this.value = value;
+	}
+	
+	@Override
+	public String toString()
+	{
+		return "<" + key + "," + value + ">";
 	}
 }

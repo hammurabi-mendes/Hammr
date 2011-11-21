@@ -21,27 +21,40 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 
+import mapreduce.programs.MapperNode;
+import mapreduce.programs.ReducerNode;
 
-import communication.ChannelHandler;
-import communication.ChannelElement;
+import communication.channel.ChannelElement;
+import communication.channel.Channel;
+import communication.channel.FileInputChannel;
+import communication.channel.InputChannel;
+import communication.channel.OutputChannel;
+import communication.reader.ChannelElementReader;
+import communication.writer.ChannelElementWriter;
+
 
 import execinfo.NodeGroup;
 
-import utilities.ChannelElementReaderShuffler;
-import utilities.ChannelElementWriterShuffler;
+import utilities.HashChannelElementWriterShuffler;
+import utilities.Logging;
+import utilities.RandomChannelElementReaderShuffler;
+import utilities.RandomChannelElementWriterShuffler;
 
 import utilities.MutableInteger;
 
 public abstract class Node implements Serializable, Runnable {
 	private static final long serialVersionUID = 1L;
 
+	protected boolean killed = false;
+	protected boolean blocked = false;
+	
 	protected String name;
 
-	protected Map<String, ChannelHandler> inputs;
-	protected Map<String, ChannelHandler> outputs;
+	protected Map<String, InputChannel> inputs;
+	protected Map<String, OutputChannel> outputs;
 
-	protected ChannelElementReaderShuffler readersShuffler;
-	protected ChannelElementWriterShuffler writersShuffler;
+	protected ChannelElementReader readersShuffler = null;
+	protected ChannelElementWriter writersShuffler = null;
 
 	private Aggregator<?> aggregator;
 
@@ -51,13 +64,16 @@ public abstract class Node implements Serializable, Runnable {
 
 	protected NodeGroup nodeGroup;
 
-	public Node() {
-		this(null);
+	public Node()
+	{
+		this("default-name");
 	}
-
+	
 	public Node(String name) {
-		inputs = new HashMap<String, ChannelHandler>();
-		outputs = new HashMap<String, ChannelHandler>();
+		this.name = name;
+		
+		inputs = new HashMap<String, InputChannel>();
+		outputs = new HashMap<String, OutputChannel>();
 	}
 
 	public void setName(String name) {
@@ -74,15 +90,15 @@ public abstract class Node implements Serializable, Runnable {
 		return inputs.keySet();
 	}
 
-	public Collection<ChannelHandler> getInputChannelHandlers() {
+	public final Collection<InputChannel> getInputChannels() {
 		return inputs.values();
 	}
 
-	public void addInputChannelHandler(ChannelHandler input) {
+	public final void addInputChannel(InputChannel input) {
 		inputs.put(input.getName(), input);
 	}
 
-	public ChannelHandler getInputChannelHandler(String source) {
+	public final InputChannel getInputChannel(String source) {
 		return inputs.get(source);
 	}
 
@@ -92,51 +108,56 @@ public abstract class Node implements Serializable, Runnable {
 		return outputs.keySet();
 	}
 
-	public Collection<ChannelHandler> getOutputChannelHandlers() {
+	public final Collection<OutputChannel> getOutputChannels() {
 		return outputs.values();
 	}
 
-	public void addOutputChannelHandler(ChannelHandler output) {
+	public final void addOutputChannel(OutputChannel output) {
 		outputs.put(output.getName(), output);
 	}
 
-	public ChannelHandler getOutputChannelHandler(String target) {
+	public final OutputChannel getOutputChannel(String target) {
 		return outputs.get(target);
 	}
 
 	/* Read Functions */
 
 	public ChannelElement read(String name) {
-		ChannelHandler channelHandler = getInputChannelHandler(name);
+		if (readersShuffler != null){
+			Logging.Info("[Node][read] ***ReadersShuffler is not null!***");
+			System.exit(1);
+		}
+		
+		InputChannel channelHandler = getInputChannel(name);
 
-		if(channelHandler != null) {
+		if (channelHandler != null) {
 			try {
 				return channelHandler.read();
 			} catch (EOFException exception) {
+				Logging.Info("[Node][read] EOF. Node: " + this.name + " Channel: " + name);
 				return null;
 			} catch (IOException exception) {
-				System.err.println("Error reading channel element from node " + name + " for node " + this);
+				Logging.Info("Error reading channel element from node " + name + " for node " + this);
 
 				exception.printStackTrace();
 			}
 		}
 
-		System.err.println("Couldn't find channel handler " + name +  " for node " + this);
+		Logging.Info("Couldn't find channel handler " + name + " for node " + this);
 
 		return null;
 	}
 
-	public ChannelElement readSomeone() {
-		if(readersShuffler == null) {
-			createReaderShuffler();
-		}
+	public final ChannelElement readSomeone() {
+		if (readersShuffler == null)
+			createReadersShuffler();
 
 		try {
-			return readersShuffler.readSomeone();
+			return readersShuffler.read();
 		} catch (EOFException exception) {
 			return null;
-		} catch (IOException exception) {
-			System.err.println("Error reading from arbitrary channel element from node " + this);
+		} catch (Exception exception) {
+			Logging.Info("Error reading from arbitrary channel element from node " + this);
 
 			exception.printStackTrace();
 		}
@@ -146,43 +167,39 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Write Functions */
 
-	public boolean write(ChannelElement channelElement, String name) {
-		ChannelHandler channelHandler = getOutputChannelHandler(name);
+	public final boolean write(ChannelElement channelElement, String name) {
+		OutputChannel channelHandler = getOutputChannel(name);
 
-		if(channelHandler != null) {
+		if (channelHandler != null) {
 			try {
 				channelHandler.write(channelElement);
 
 				return true;
 			} catch (IOException exception) {
-				System.err.println("Error writing channel element to node " + name +  " for node " + this);
+				Logging.Info("Error writing channel element to node " + name + " for node " + this);
 
 				exception.printStackTrace();
 				return false;
 			}
 		}
 
-		System.err.println("Couldn't find channel handler " + name +  " for node " + this);
+		Logging.Info("Couldn't find channel handler " + name + " for node " + this);
 
 		return false;
 	}
 
-	public boolean writeSomeone(ChannelElement channelElement) {
-		if(writersShuffler == null) {
-			createWriterShuffler();
-		}
-
+	public final boolean write(ChannelElement channelElement) {
 		try {
-			return writersShuffler.writeSomeone(channelElement);
-		} catch (IOException exception) {
-			System.err.println("Error writing to arbitary channel element from node " + this);
+			return writersShuffler.write(channelElement);
+		} catch (Exception exception) {
+			Logging.Info("Error writing to arbitary channel element from node " + this);
 
 			exception.printStackTrace();
 		}
 
 		return false;
 	}
-
+	
 	public boolean writeEveryone(ChannelElement channelElement) {
 		Set<String> outputChannelNames = getOutputChannelNames();
 
@@ -203,52 +220,53 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Close functions */
 
-	public boolean closeOutputs() {
-		Collection<ChannelHandler> outputChannelHandlers = getOutputChannelHandlers();
-
-		return closeChannelHandlers(outputChannelHandlers);
-	}
-
-	public boolean closeChannelHandlers(Collection<ChannelHandler> channelHandlers) {
-		boolean finalResult = true;
-
-		for(ChannelHandler channelHandler: channelHandlers) {
-			try {
-				boolean immediateResult = channelHandler.close();
-
-				if(immediateResult == false) {
-					System.err.println("Error closing channel handler " + channelHandler.getName() + " for node " + this);
-				}
-
-				finalResult |= immediateResult;
-			} catch (IOException exception) {
-				System.err.println("Error closing channel handler " + channelHandler.getName() + " for node " + this + " (I/O error)");
-
-				exception.printStackTrace();
-				finalResult |= false;
-			}
+	public final boolean flushAndCloseOutputs() {
+		try {
+			writersShuffler.flush();
+			return writersShuffler.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
 		}
-
-		return finalResult;
 	}
 
 	/* ReaderShuffler and WriterShuffler functions */
 
-	private void createReaderShuffler() {
+	public void createReadersShuffler() {
 		try {
-			readersShuffler = new ChannelElementReaderShuffler(inputs);
+			readersShuffler = new RandomChannelElementReaderShuffler(inputs);
 		} catch (IOException exception) {
-			System.err.println("Error creating read shuffler for node " + this);
+			Logging.Info("Error creating read shuffler for node " + this);
 
 			exception.printStackTrace();
 		}
 	}
 
-	private void createWriterShuffler() {
-		Collection<ChannelHandler> channelHandlers = getOutputChannelHandlers();
-
-		writersShuffler = new ChannelElementWriterShuffler(channelHandlers);
+	public void createWritersShuffler() {
+		Collection<OutputChannel> channelHandlers = getOutputChannels();
+		
+		/**
+		 * TODO: Fix this instanceof, should use better programming style
+		 */
+		if(this instanceof MapperNode || this instanceof ReducerNode)
+		{
+			writersShuffler = new HashChannelElementWriterShuffler(channelHandlers);
+		}
+		else
+		{
+			writersShuffler = new RandomChannelElementWriterShuffler(channelHandlers);
+		}
 	}
+
+	public void setWritersShuffler(ChannelElementWriter writersShuffler) {
+		this.writersShuffler = writersShuffler;
+	}
+
+	public ChannelElementWriter getWritersShuffler() {
+		return writersShuffler;
+	}
+	
+	/* Runtime information (marking / grouping) */
 
 	/* Aggregator functions */
 
@@ -259,8 +277,6 @@ public abstract class Node implements Serializable, Runnable {
 	public Aggregator<?> getAggregator() {
 		return aggregator;
 	}
-
-	/* Runtime information (marking / grouping) */
 
 	/* Mark functions */
 	
@@ -295,7 +311,36 @@ public abstract class Node implements Serializable, Runnable {
 
 	public abstract void run();
 
+	@Override
 	public String toString() {
 		return name;
 	}
+	
+	/* preemption */
+	public final void kill() {
+		killed = true;
+	}
+
+	public final boolean isKilled() {
+		return killed;
+	}
+
+	public final void block() {
+		blocked = true;
+	}
+
+	public final boolean isBlocked() {
+		return blocked;
+	}
+
+	public final Long getInputFilesLength() {
+		Long totalLength = 0L;
+		for (Channel handler : inputs.values()) {
+			if (handler instanceof FileInputChannel) {
+				totalLength += ((FileInputChannel) handler).getLength();
+			}
+		}
+		return totalLength;
+	}
+	
 }

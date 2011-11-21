@@ -11,21 +11,38 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package mapreduce.programs;
 
+
+import java.io.IOException;
 import java.util.Set;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
-public abstract class Combiner<O,V> {
+import mapreduce.communication.MRChannelElement;
+import communication.channel.ChannelElement;
+import communication.writer.ChannelElementWriter;
+
+public abstract class Combiner<O,V> implements ChannelElementWriter {
 	private static final long serialVersionUID = 1L;
+	private ChannelElementWriter writer = null;
+	
+	private Map<O,V> currentValues = new HashMap<O,V>();
 
-	private Map<O,V> currentValues;
-
-	public Combiner() {
-		currentValues = new HashMap<O,V>();
+	@Override
+	public final boolean write(ChannelElement elt) throws IOException
+	{
+		MRChannelElement<O,V> mrelt = (MRChannelElement<O,V>) elt;
+		add(mrelt.getKey(), mrelt.getValue());
+		return true;
 	}
-
-	public void add(O object, V newValue) {
+	
+	public void initialize(ChannelElementWriter writer)
+	{
+		this.writer = writer;
+	}
+	
+	private void add(O object, V newValue) {
 		V updatedValue;
 
 		V oldValue = currentValues.get(object);
@@ -53,4 +70,21 @@ public abstract class Combiner<O,V> {
 	}
 
 	public abstract V combine(V oldValue, V newValue);
+	
+	@Override
+	public final boolean flush() throws IOException
+	{
+		for(Entry<O,V> entry : currentValues.entrySet())
+		{
+			writer.write(new MRChannelElement<O,V>(entry.getKey(), entry.getValue()));
+		}
+		currentValues.clear();
+		return writer.flush();
+	}
+	
+	@Override 
+	public final boolean close() throws IOException
+	{
+		return writer.close();
+	}
 }

@@ -4,18 +4,20 @@
               To include a user specific buildfile here, simply create one in the same
               directory with the processing instruction <?eclipse.ant.import?>
               as the first entry and export the buildfile again. -->
-<project basedir="." default="build" name="Common">
+<project basedir="." default="build" name="Common_1">
     <property environment="env"/>
-    <property name="Client.location" value="../Client"/>
-    <property name="Launcher.location" value="../Launcher"/>
-    <property name="Manager.location" value="../Manager"/>
-    <property name="ECLIPSE_HOME" value="../../../../../../Applications/Eclipse"/>
+    <property name="Client_1.location" value="../Client"/>
+    <property name="Launcher_1.location" value="../Launcher"/>
+    <property name="Manager_1.location" value="../Manager"/>
+    <property name="ECLIPSE_HOME" value="../../../../../../usr/lib/eclipse"/>
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.6"/>
     <property name="source" value="1.6"/>
-    <path id="Common.classpath">
+    <path id="Common_1.classpath">
         <pathelement location="bin"/>
-        <pathelement location="../lib/jgrapht-jdk1.6.jar"/>
+        <pathelement location="../../Hammr/lib/jgrapht-jdk1.6.jar"/>
+        <pathelement location="../../Hammr/lib/commons-logging-1.1.1.jar"/>
+        <pathelement location="../../Hammr/lib/hadoop-core-0.20.2-cdh3u1.jar"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -36,24 +38,24 @@
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source}" target="${target}">
             <src path="src"/>
-            <classpath refid="Common.classpath"/>
+            <classpath refid="Common_1.classpath"/>
         </javac>
     </target>
     <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects">
-        <ant antfile="build.xml" dir="${Client.location}" inheritAll="false" target="clean"/>
-        <ant antfile="build.xml" dir="${Client.location}" inheritAll="false" target="build">
+        <ant antfile="${Client_1.location}/build.xml" dir="${Client_1.location}" inheritAll="false" target="clean"/>
+        <ant antfile="${Client_1.location}/build.xml" dir="${Client_1.location}" inheritAll="false" target="build">
             <propertyset>
                 <propertyref name="build.compiler"/>
             </propertyset>
         </ant>
-        <ant antfile="build.xml" dir="${Launcher.location}" inheritAll="false" target="clean"/>
-        <ant antfile="build.xml" dir="${Launcher.location}" inheritAll="false" target="build">
+        <ant antfile="${Launcher_1.location}/build.xml" dir="${Launcher_1.location}" inheritAll="false" target="clean"/>
+        <ant antfile="${Launcher_1.location}/build.xml" dir="${Launcher_1.location}" inheritAll="false" target="build">
             <propertyset>
                 <propertyref name="build.compiler"/>
             </propertyset>
         </ant>
-        <ant antfile="build.xml" dir="${Manager.location}" inheritAll="false" target="clean"/>
-        <ant antfile="build.xml" dir="${Manager.location}" inheritAll="false" target="build">
+        <ant antfile="${Manager_1.location}/build.xml" dir="${Manager_1.location}" inheritAll="false" target="clean"/>
+        <ant antfile="${Manager_1.location}/build.xml" dir="${Manager_1.location}" inheritAll="false" target="build">
             <propertyset>
                 <propertyref name="build.compiler"/>
             </propertyset>
