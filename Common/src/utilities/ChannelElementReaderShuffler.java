@@ -7,60 +7,23 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package utilities;
 
-/*
 import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-
-import communication.ChannelElement;
-import communication.ChannelHandler;
 
 import java.io.EOFException;
 import java.io.IOException;
 
-public class ChannelElementReaderShuffler {
-	private List<ChannelHandler> inputs;
-
-	public ChannelElementReaderShuffler(Map<String, ChannelHandler> inputs) throws IOException {
-		this.inputs = new ArrayList<ChannelHandler>();
-
-		this.inputs.addAll(inputs.values());
-	}
-
-	public ChannelElement readSomeone() throws EOFException, IOException {
-		while(inputs.size() > 0) {
-			ChannelHandler channelHandler = inputs.get(0);
-
-			try {
-				return channelHandler.read();
-			} catch (EOFException exception) {
-				inputs.remove(0);
-			}
-		}
-
-		throw new EOFException();
-	}
-}
-*/
-
-import java.util.Map;
-
-import communication.ChannelElement;
-import communication.ChannelHandler;
-
-import communication.SHMChannelElementMultiplexer;
-
-import java.io.EOFException;
-import java.io.IOException;
+import communication.channel.ChannelElement;
+import communication.channel.InputChannel;
+import communication.reader.SHMChannelElementMultiplexer;
 
 public class ChannelElementReaderShuffler {
 	private SHMChannelElementMultiplexer multiplexer;
 
-	public ChannelElementReaderShuffler(Map<String, ChannelHandler> inputs) throws IOException {
+	public ChannelElementReaderShuffler(Map<String, InputChannel> inputs) throws IOException {
 		multiplexer = new SHMChannelElementMultiplexer(inputs.keySet());
 
 		Relayer relayer;
@@ -79,14 +42,14 @@ public class ChannelElementReaderShuffler {
 	private class Relayer extends Thread {
 		private String origin;
 
-		private ChannelHandler channelHandler;
+		private InputChannel inputChannel;
 
 		private SHMChannelElementMultiplexer multiplexer;
 
-		public Relayer(String origin, ChannelHandler channelHandler, SHMChannelElementMultiplexer multiplexer) {
+		public Relayer(String origin, InputChannel inputChannel, SHMChannelElementMultiplexer multiplexer) {
 			this.origin = origin;
 
-			this.channelHandler = channelHandler;
+			this.inputChannel = inputChannel;
 
 			this.multiplexer = multiplexer;
 		}
@@ -96,7 +59,7 @@ public class ChannelElementReaderShuffler {
 
 			while(true) {
 				try {
-					channelElement = channelHandler.read();
+					channelElement = inputChannel.read();
 				} catch (EOFException exception) {
 					break;
 				} catch (IOException exception) {

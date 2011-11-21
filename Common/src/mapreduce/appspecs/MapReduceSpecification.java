@@ -11,12 +11,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package mapreduce.appspecs;
 
-import enums.CommunicationType;
-import exceptions.InexistentInputException;
-import exceptions.OverlapingFilesException;
 import appspecs.ApplicationSpecification;
 import appspecs.Node;
 
+import enums.CommunicationType;
+
+import utilities.FileInformation;
+import utilities.DirectoryInformation;
+
+import exceptions.InexistentInputException;
+import exceptions.OverlapingFilesException;
 
 public class MapReduceSpecification extends ApplicationSpecification {
 	private static final long serialVersionUID = 1L;
@@ -28,11 +32,11 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	private Node[] mergeStage;
 
-	public MapReduceSpecification(String name, String directoryPrefix) {
-		super(name, directoryPrefix);
+	public MapReduceSpecification(String name, DirectoryInformation baseDirectory) {
+		super(name, baseDirectory);
 	}
 
-	public void insertMappers(String input, Node splitter, Node[] mappers) throws InexistentInputException {
+	public void insertMappers(FileInformation input, Node splitter, Node[] mappers) throws InexistentInputException {
 		stageSplitter(splitter);
 
 		addInput(splitter, input);
@@ -42,7 +46,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		insertEdges(splitStage, mapStage, CommunicationType.FILE);
 	}
 
-	public void insertMappers(String[] inputs, Node[] mappers) throws InexistentInputException {
+	public void insertMappers(FileInformation[] inputs, Node[] mappers) throws InexistentInputException {
 		stageMappers(mappers);
 
 		for(int i = 0; i < inputs.length; i++) {
@@ -50,7 +54,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		}
 	}
 
-	public void insertReducers(String output, Node merger, Node[] reducers) throws OverlapingFilesException {
+	public void insertReducers(FileInformation output, Node merger, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		stageMerger(merger);
@@ -60,7 +64,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		insertEdges(reduceStage, mergeStage, CommunicationType.FILE);
 	}
 
-	public void insertReducers(String[] outputs, Node[] reducers) throws OverlapingFilesException {
+	public void insertReducers(FileInformation[] outputs, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		for(int i = 0; i < outputs.length; i++) {

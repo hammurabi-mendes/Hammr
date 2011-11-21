@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -12,18 +12,56 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package utilities;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import appspecs.DirectoryInformation;
 
 public class FileHelper {
-	public static boolean exists(String name) {
-		File file = new File(name);
+	public static boolean exists(FileInformation input) {
+		File file = new File(input);
 
 		return file.exists();
 	}
 
-	public static boolean move(String source, String target) {
+	public static FileInformation getFileInformation(String path, String file) {
+		return getFileInformation(path, file, FileProtocol.POSIX_COMPATIBLE);
+	}
+
+	public static FileInformation getFileInformation(String path, String file, FileProtocol protocol) {
+		boolean slashPresent = path.endsWith("/");
+
+		return new FileInformation((slashPresent ? path : path + "/") + file, protocol);
+	}
+
+	public static boolean move(FileInformation source, FileInformation target) {
 		File fileSource = new File(source);
 		File fileTarget = new File(target);
 
 		return fileSource.renameTo(fileTarget);
 	}
-}
+
+	public static InputStream openR(FileInformation fileInformation) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static OutputStream openW(FileInformation fileInformation) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public static long getLength(FileInformation fileInformation) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	public static boolean remove(FileInformation fileInformation) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public static DirectoryInformation getDirectoryInformation(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}

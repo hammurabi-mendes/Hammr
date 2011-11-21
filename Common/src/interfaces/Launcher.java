@@ -7,16 +7,18 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package interfaces;
 
-import java.util.List;
+import java.util.Collection;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 import execinfo.NodeGroup;
+
+import execinfo.LauncherStatus;
 
 /**
  * Launcher remote interface. These functions can be called by remote machines.
@@ -32,18 +34,26 @@ public interface Launcher extends Remote {
 	public String getId() throws RemoteException;
 
 	/**
-	 * Submits a NodeGroup for execution. Called by the manager.
+	 * Obtains the status of the Launcher.
+	 * 
+	 * @return The status of the Launcher.
+	 */
+	public LauncherStatus getStatus() throws RemoteException;
+
+	/**
+	 * Submits a NodeGroup for execution, and adjust the number of occupied slots in the
+	 * launcher.
 	 * 
 	 * @param nodeGroup NodeGroup to be executed.
 	 * 
-	 * @return Always true.
+	 * @return True if the NodeGroup fits into the number of free slots available; false otherwise.
 	 */
 	public boolean addNodeGroup(NodeGroup nodeGroup) throws RemoteException;
-	
+
 	/**
 	 * Obtains the current running NodeGroups. Called by the manager.
 	 * 
 	 * @return The current running NodeGroups.
 	 */
-	public List<NodeGroup> getNodeGroups() throws RemoteException;
+	public Collection<NodeGroup> getNodeGroups() throws RemoteException;
 }

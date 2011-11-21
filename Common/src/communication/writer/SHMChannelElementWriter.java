@@ -7,28 +7,40 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
-package communication;
+package communication.writer;
 
-import enums.CommunicationType;
+import java.io.IOException;
 
-public class FileChannelHandler extends ChannelHandler {
-	private static final long serialVersionUID = 1L;
+import communication.channel.ChannelElement;
+import communication.interfaces.ChannelElementWriter;
 
-	private String location;
+import communication.reader.SHMChannelElementMultiplexer;
 
-	public FileChannelHandler(ChannelHandler.Mode mode, String name, String location) {
-		super(CommunicationType.FILE, mode, name);
+public class SHMChannelElementWriter implements ChannelElementWriter {
+	private String name;
+	private SHMChannelElementMultiplexer channelElementMultiplexer;
 
-		setLocation(location);
+	public SHMChannelElementWriter(String name, SHMChannelElementMultiplexer shmChannelElementMultiplexer) {
+		this.name = name;
+
+		this.channelElementMultiplexer = shmChannelElementMultiplexer;
 	}
 
-	public void setLocation(String location) {
-		this.location = location;
+	public boolean write(ChannelElement channelElement) throws IOException {
+		channelElementMultiplexer.write(name, channelElement);
+
+		return true;
 	}
 
-	public String getLocation() {
-		return location;
+	public boolean flush() throws IOException {
+		return true;
+	}
+
+	public boolean close() throws IOException {
+		channelElementMultiplexer.close(name);
+
+		return true;
 	}
 }

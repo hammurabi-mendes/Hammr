@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -19,9 +19,9 @@ import java.util.ArrayList;
 import java.rmi.RemoteException;
 
 import enums.CommunicationType;
-import exceptions.OverlapingFilesException;
 
-import mapreduce.appspecs.MapReduceSpecification;
+import exceptions.InexistentInputException;
+import exceptions.OverlapingFilesException;
 
 import interfaces.Manager;
 
@@ -31,15 +31,23 @@ import appspecs.Node;
 import nodes.ReaderSomeoneWriterSomeone;
 import nodes.TrivialNode;
 
+import mapreduce.appspecs.MapReduceSpecification;
+import mapreduce.programs.counting.CountingMapper;
+import mapreduce.programs.counting.CountingMerger;
+import mapreduce.programs.counting.CountingReducer;
+
+import utilities.FileHelper;
+import utilities.FileInformation;
+import utilities.DirectoryInformation;
 
 import utilities.RMIHelper;
 
 public class Client {
 	private String registryLocation;
 
-	private String baseDirectory;
+	private DirectoryInformation baseDirectory;
 
-	public Client(String registryLocation, String baseDirectory) {
+	public Client(String registryLocation, DirectoryInformation baseDirectory) {
 		this.registryLocation = registryLocation;
 
 		this.baseDirectory = baseDirectory;
@@ -50,8 +58,8 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test1", baseDirectory);
 
-		String inputFilename;
-		String outputFilename;
+		FileInformation inputFilename;
+		FileInformation outputFilename;
 
 		Node[] nodesStage1 = new Node[1];
 
@@ -62,13 +70,13 @@ public class Client {
 		applicationSpecification.insertNodes(nodesStage1);
 
 		for(int i = 0; i < nodesStage1.length; i++) {
-			inputFilename = "input-stage1-" + i + ".dat";
+			inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "input-stage1-" + i + ".dat", baseDirectory.getProtocol());
 
 			applicationSpecification.addInput(nodesStage1[i], inputFilename);
 		}
 
 		for(int i = 0; i < nodesStage1.length; i++) {
-			outputFilename = "output-stage1-" + i + ".dat";
+			outputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "output-stage1-" + i + ".dat", baseDirectory.getProtocol());
 
 			try {
 				applicationSpecification.addOutput(nodesStage1[i], outputFilename);
@@ -102,8 +110,8 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", baseDirectory);
 
-		String inputFilename;
-		String outputFilename;
+		FileInformation inputFilename;
+		FileInformation outputFilename;
 
 		Node[] nodesStage1 = new Node[1];
 
@@ -114,7 +122,7 @@ public class Client {
 		applicationSpecification.insertNodes(nodesStage1);
 
 		for(int i = 0; i < nodesStage1.length; i++) {
-			inputFilename = "input-stage1-" + i + ".dat";
+			inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "input-stage1-" + i + ".dat", baseDirectory.getProtocol());
 
 			applicationSpecification.addInput(nodesStage1[i], inputFilename);
 		}
@@ -128,7 +136,7 @@ public class Client {
 		applicationSpecification.insertNodes(nodesStage2);
 
 		for(int i = 0; i < nodesStage2.length; i++) {
-			outputFilename = "output-stage2-" + i + ".dat";
+			outputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "output-stage2-" + i + ".dat", baseDirectory.getProtocol());
 
 			try {
 				applicationSpecification.addOutput(nodesStage2[i], outputFilename);
@@ -172,7 +180,7 @@ public class Client {
 
 		applicationSpecification.insertNodes(nodes);
 
-		String inputFilename = "fake-input.dat";
+		FileInformation inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "fake-input.dat", baseDirectory.getProtocol());
 
 		applicationSpecification.addInput(nodes[0], inputFilename);
 
@@ -219,6 +227,89 @@ public class Client {
 		}
 	}
 
+	public void performMapReduce(String[] inputs, MapReduceSpecification.Type edgeType, boolean finalMerge) {
+		int numberMappers;
+		int numberReducers;
+
+		numberMappers = numberReducers = inputs.length;
+
+		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
+
+		// Create the MapReduce specification
+
+		MapReduceSpecification mapReduceSpecification = new MapReduceSpecification("mapreduce", baseDirectory);
+
+		// Insert the mappers
+
+		Node[] nodesStage1 = new Node[numberMappers];
+
+		for(int i = 0; i < nodesStage1.length; i++) {
+			nodesStage1[i] = new CountingMapper<String>(numberReducers);
+		}
+
+		try {
+			// Create the input filenames
+
+			FileInformation[] inputFilenames = new FileInformation[numberMappers];
+
+			for(int i = 0; i < inputs.length; i++) {
+				inputFilenames[i] = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i], baseDirectory.getProtocol());
+			}
+
+			mapReduceSpecification.insertMappers(inputFilenames, nodesStage1);
+		} catch (InexistentInputException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
+
+		// Insert the reducers
+
+		Node[] nodesStage2 = new Node[numberReducers];
+
+		for(int i = 0; i < nodesStage2.length; i++) {
+			nodesStage2[i] = new CountingReducer<String>();
+		}
+
+		try {
+			if(finalMerge) {
+				mapReduceSpecification.insertReducers(FileHelper.getFileInformation(baseDirectory.getPath(), "output-merger.dat", baseDirectory.getProtocol()), new CountingMerger<String>(), nodesStage2);
+			}
+			else {
+				// Append a ".out" extension to the input filenames to form the output filenames
+
+				FileInformation[] outputFilenames = new FileInformation[numberReducers];
+
+				for(int i = 0; i < inputs.length; i++) {
+					outputFilenames[i] = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i] + ".out", baseDirectory.getProtocol());
+				}
+
+				mapReduceSpecification.insertReducers(outputFilenames, nodesStage2);
+			}
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
+
+		try {
+			mapReduceSpecification.setupCommunication(edgeType);
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
+		}
+
+		try {
+			manager.registerApplication(mapReduceSpecification);
+		} catch (RemoteException exception) {
+			System.err.println("Unable to contact manager");
+			exception.printStackTrace();
+
+			System.exit(1);
+		}
+	}
+
 	public static void main(String[] arguments) {
 		if(arguments.length <= 2) {
 			System.err.println("Usage: Client <registry_location> <base_directory> <command> [<command_argument> ... <comand_argument>]");
@@ -233,7 +324,7 @@ public class Client {
 		String command = arguments[2];
 
 		if(command.equals("test1")) {
-			Client client = new Client(registryLocation, baseDirectory);
+			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
 
 			client.performTest1();
 
@@ -241,7 +332,7 @@ public class Client {
 		}
 
 		if(command.equals("test2")) {
-			Client client = new Client(registryLocation, baseDirectory);
+			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
 
 			client.performTest2(CommunicationType.TCP);
 
@@ -255,7 +346,7 @@ public class Client {
 				System.exit(1);
 			}
 
-			Client client = new Client(registryLocation, baseDirectory);
+			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
 
 			int numberNodesEdges = Integer.parseInt(arguments[3]);
 
@@ -273,7 +364,7 @@ public class Client {
 				System.exit(1);
 			}
 
-			MRClient client = new MRClient(registryLocation, baseDirectory);
+			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
 
 			MapReduceSpecification.Type type = MapReduceSpecification.Type.FILEBASED;
 

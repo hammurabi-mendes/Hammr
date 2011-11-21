@@ -48,6 +48,8 @@ import utilities.RMIHelper;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ConcreteManager implements Manager {
+	private static ConcreteManager instance;
+
 	private String baseDirectory;
 
 	// Active launchers, mapped by ID
@@ -58,12 +60,47 @@ public class ConcreteManager implements Manager {
 
 	private Random random;
 
+	static {
+		String registryLocation = System.getProperty("java.rmi.server.location");
+		String baseDirectory = System.getProperty("hammr.manager.basedir");
+
+		instance = setupManager(registryLocation, baseDirectory);
+	}
+
 	/**
-	 * Constructor method.
+	 * Setups a manager for execution.
+	 * 
+	 * @param registryLocation Location of the registry used to store the manager reference.
+	 * 
+	 * @return A manager ready for execution.
+	 */
+	private static ConcreteManager setupManager(String registryLocation, String baseDirectory) {
+		// Initiates a concrete manager
+
+		ConcreteManager manager = new ConcreteManager(baseDirectory);
+
+		// Makes the manager available for remote calls
+
+		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", manager);
+
+		return manager;
+	}
+
+	/**
+	 * Return the singleton instance of the manager.
+	 * 
+	 * @return The singleton instance of the manager.
+	 */
+	public static ConcreteManager getInstance() {
+		return instance;
+	}
+
+	/**
+	 * Private constructor method, used by the singleton constructor.
 	 * 
 	 * @param baseDirectory The working directory of the manager.
 	 */
-	public ConcreteManager(String baseDirectory) {
+	private ConcreteManager(String baseDirectory) {
 		this.baseDirectory = baseDirectory;
 
 		this.registeredLaunchers = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
@@ -250,7 +287,7 @@ public class ConcreteManager implements Manager {
 
 				if(scheduler.finishedApplication()) {
 					scheduler.terminateApplication();
-					
+
 					finishApplication(resultSummary.getNodeGroupApplication());
 				}
 				else {
@@ -273,7 +310,7 @@ public class ConcreteManager implements Manager {
 			finishApplication(resultSummary.getNodeGroupApplication());
 			return false;
 		} catch (InexistentOutputException exception) {
-			 System.err.println("Necessary output files missing for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
+			System.err.println("Necessary output files missing for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
 
 			finishApplication(resultSummary.getNodeGroupApplication());
 			return false;
@@ -384,6 +421,11 @@ public class ConcreteManager implements Manager {
 		resultGenerator.start();
 	}
 
+	// Overrides the basic toString() 
+	public String toString() {
+		return "Manager running on directory \"" + baseDirectory + "\"";
+	}
+
 	/**
 	 * Manager startup method.
 	 * 
@@ -392,19 +434,6 @@ public class ConcreteManager implements Manager {
 	 *        2) The manager working directory.
 	 */
 	public static void main(String[] arguments) {
-		if(arguments.length != 2) {
-			System.err.println("Usage: ConcreteManager <registry_location> <base_directory>");
-
-			System.exit(1);
-		}	
-
-		String registryLocation = arguments[0];
-
-		// Initiates a concrete manager and makes it available
-		// for remote method calls.
-
-		ConcreteManager concreteManager = new ConcreteManager(arguments[1]);
-
-		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", concreteManager);
+		System.out.println("Running " + ConcreteManager.getInstance().toString());
 	}
 }

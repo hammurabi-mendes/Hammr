@@ -9,49 +9,35 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package mapreduce.programs;
+package communication.channel;
 
-import java.io.Serializable;
-import java.util.Set;
+import java.io.IOException;
 
-import java.util.Map;
-import java.util.HashMap;
+import communication.channel.ChannelElement;
+import communication.interfaces.ChannelElementWriter;
 
-public abstract class Combiner<O,V> implements Serializable {
+public class OutputChannel extends Channel implements ChannelElementWriter {
 	private static final long serialVersionUID = 1L;
 
-	private Map<O,V> currentValues;
+	private ChannelElementWriter writer;
 
-	public Combiner() {
-		currentValues = new HashMap<O,V>();
+	public OutputChannel(String name) {
+		super(name);
 	}
 
-	public void add(O object, V newValue) {
-		V updatedValue;
-
-		V oldValue = currentValues.get(object);
-
-		if(oldValue != null) {
-			updatedValue = combine(oldValue, newValue);
-		}
-		else {
-			updatedValue = newValue;
-		}
-
-		currentValues.put(object, updatedValue);
+	public final void setChannelElementWriter(ChannelElementWriter writer) {
+		this.writer = writer;
 	}
 
-	public V get(O object) {
-		return currentValues.get(object);
+	public final boolean write(ChannelElement channelElement) throws IOException {
+		return writer.write(channelElement);
 	}
 
-	public Set<O> getCurrentObjects() {
-		return currentValues.keySet();
+	public boolean flush() throws IOException {
+		return writer.flush();
 	}
 
-	public Set<Map.Entry<O,V>> getCurrentEntries() {
-		return currentValues.entrySet();
+	public boolean close() throws IOException {
+		return writer.close();
 	}
-
-	public abstract V combine(V oldValue, V newValue);
 }

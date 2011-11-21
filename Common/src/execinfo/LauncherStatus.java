@@ -9,49 +9,61 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package mapreduce.programs;
+package execinfo;
 
 import java.io.Serializable;
-import java.util.Set;
 
-import java.util.Map;
-import java.util.HashMap;
-
-public abstract class Combiner<O,V> implements Serializable {
+public class LauncherStatus implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Map<O,V> currentValues;
+	private String launcherId;
 
-	public Combiner() {
-		currentValues = new HashMap<O,V>();
+	private String host;
+	private String rack;
+
+	private int totalSlots;
+	private int ocupiedSlots;
+
+	public LauncherStatus(String launcherId, String host, String rack) {
+		this.launcherId = launcherId;
+
+		this.host = host;
+		this.rack = rack;
 	}
 
-	public void add(O object, V newValue) {
-		V updatedValue;
-
-		V oldValue = currentValues.get(object);
-
-		if(oldValue != null) {
-			updatedValue = combine(oldValue, newValue);
-		}
-		else {
-			updatedValue = newValue;
-		}
-
-		currentValues.put(object, updatedValue);
+	public String getLauncherId() {
+		return launcherId;
 	}
 
-	public V get(O object) {
-		return currentValues.get(object);
+	public String getHost() {
+		return host;
 	}
 
-	public Set<O> getCurrentObjects() {
-		return currentValues.keySet();
+	public String getRack(){
+		return rack;
 	}
 
-	public Set<Map.Entry<O,V>> getCurrentEntries() {
-		return currentValues.entrySet();
+	public int getTotalSlots() {
+		return totalSlots;
 	}
 
-	public abstract V combine(V oldValue, V newValue);
+	public void setTotalSlots(int totalSlots) {
+		this.totalSlots = totalSlots;
+	}
+
+	public int getOcupiedSlots() {
+		return ocupiedSlots;
+	}
+
+	public void setOcupiedSlots(int ocupiedSlots) {
+		this.ocupiedSlots = ocupiedSlots;
+	}
+
+	public boolean isAvailable(){
+		return getFreeSlots() > 0;
+	}
+
+	public int getFreeSlots() {
+		return totalSlots - ocupiedSlots;
+	}
 }
