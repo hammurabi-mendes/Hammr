@@ -43,7 +43,7 @@ import appspecs.Node;
 import appspecs.Edge;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
+import utilities.Filename;
 
 import utilities.MutableInteger;
 
@@ -335,9 +335,9 @@ public class ConcreteScheduler implements Scheduler {
 	public synchronized void prepareIteration() throws InexistentInputException {
 		// Check if all the inputs are present
 
-		List<FileInformation> missingInputs = new ArrayList<FileInformation>();;
+		List<Filename> missingInputs = new ArrayList<Filename>();;
 
-		for(FileInformation input: applicationSpecification.getInputFilenames()) {
+		for(Filename input: applicationSpecification.getInputFilenames()) {
 			if(!FileHelper.exists(input)) {
 				missingInputs.add(input);
 			}
@@ -387,9 +387,9 @@ public class ConcreteScheduler implements Scheduler {
 	public synchronized void terminateIteration() throws InexistentOutputException {
 		// If the iteration is finished, check if all the outputs are present
 
-		List<FileInformation> missingOutputs = new ArrayList<FileInformation>();;
+		List<Filename> missingOutputs = new ArrayList<Filename>();;
 
-		for(FileInformation output: applicationSpecification.getOutputFilenames()) {
+		for(Filename output: applicationSpecification.getOutputFilenames()) {
 			if(!FileHelper.exists(output)) {
 				missingOutputs.add(output);
 			}

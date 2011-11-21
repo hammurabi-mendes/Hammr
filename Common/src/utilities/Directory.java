@@ -9,33 +9,34 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package communication.channel;
+package utilities;
 
-import java.io.IOException;
+public class Directory {
+	private String path;
+	private Protocol protocol;
 
-import utilities.FileHelper;
-import utilities.Filename;
-
-public class FileOutputChannel extends OutputChannel {
-	private static final long serialVersionUID = 1L;
-
-	protected Filename filename;
-
-	public FileOutputChannel(Filename filename) {
-		super(filename.getLocation());
-
-		this.filename = filename;
+	public Directory(String location) {
+		this(location, Protocol.POSIX_COMPATIBLE);
 	}
 
-	public final Filename getFileInformation() {
-		return filename;
+	public Directory(String location, Protocol protocol) {
+		this.path = location;
+		this.protocol = protocol;
 	}
 
-	public final long getLength(){
-		return FileHelper.length(filename);
+	public String getPath() {
+		return path;
 	}
 
-	public final boolean remove() throws IOException {
-		return FileHelper.remove(filename);
+	public Protocol getProtocol() {
+		return protocol;
+	}
+
+	public boolean equals(Directory other) {
+		return (this.getPath() == other.getPath() && this.getProtocol() == other.getProtocol());
+	}
+
+	public int hashCode() {
+		return path.hashCode() + protocol.hashCode();
 	}
 }

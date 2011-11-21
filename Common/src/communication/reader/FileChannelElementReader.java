@@ -12,8 +12,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package communication.reader;
 
 import java.io.FileNotFoundException;
-import java.io.EOFException;
 import java.io.IOException;
+
+import java.io.EOFException;
 
 import communication.channel.ChannelElement;
 import communication.interfaces.ChannelElementReader;
@@ -21,13 +22,13 @@ import communication.interfaces.ChannelElementReader;
 import communication.stream.ChannelElementInputStream;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
+import utilities.Filename;
 
 public class FileChannelElementReader implements ChannelElementReader {
 	private ChannelElementInputStream channelElementInputStream;
 
-	public FileChannelElementReader(FileInformation fileInformation) throws FileNotFoundException, IOException {
-		channelElementInputStream = new ChannelElementInputStream(FileHelper.openR(fileInformation));
+	public FileChannelElementReader(Filename filename) throws FileNotFoundException, IOException {
+		channelElementInputStream = new ChannelElementInputStream(FileHelper.openR(filename));
 	}
 
 	public synchronized ChannelElement read() throws EOFException, IOException {

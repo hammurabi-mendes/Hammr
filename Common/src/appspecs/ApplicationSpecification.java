@@ -26,8 +26,9 @@ import java.util.ArrayList;
 import org.jgrapht.graph.*;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
-import utilities.DirectoryInformation;
+import utilities.Filename;
+import utilities.Directory;
+import utilities.Protocol;
 
 import communication.channel.SHMInputChannel;
 import communication.channel.SHMOutputChannel;
@@ -46,10 +47,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private static final long serialVersionUID = 1L;
 
 	protected String name;
-	protected DirectoryInformation baseDirectory;
+	protected Directory baseDirectory;
 
-	protected Map<FileInformation, Set<FileInputChannel>> inputs;
-	protected Map<FileInformation, FileOutputChannel> outputs;
+	protected Map<Filename, Set<FileInputChannel>> inputs;
+	protected Map<Filename, FileOutputChannel> outputs;
 
 
 	protected Set<Node> fileConsumers;
@@ -60,7 +61,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	protected String nameGenerationString = "node-";
 	protected long nameGenerationCounter = 0L;
 
-	public ApplicationSpecification(String name, DirectoryInformation baseDirectory) {
+	public ApplicationSpecification(String name, Directory baseDirectory) {
 		super(Edge.class);
 
 		this.name = name;
@@ -69,15 +70,15 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		fileConsumers = new HashSet<Node>();
 		fileProducers = new HashSet<Node>();
 
-		inputs = new HashMap<FileInformation, Set<FileInputChannel>>();
-		outputs = new HashMap<FileInformation, FileOutputChannel>();
+		inputs = new HashMap<Filename, Set<FileInputChannel>>();
+		outputs = new HashMap<Filename, FileOutputChannel>();
 	}
 
 	public ApplicationSpecification() {
-		this("default_application", FileHelper.getDirectoryInformation("/tmp/userdata"));
+		this("default_application", FileHelper.getDirectoryInformation("/tmp/userdata", Protocol.POSIX_COMPATIBLE));
 	}
 
-	public ApplicationSpecification(String name, DirectoryInformation baseDirectory, Node[] nodes, Edge[] edges) {
+	public ApplicationSpecification(String name, Directory baseDirectory, Node[] nodes, Edge[] edges) {
 		this(name, baseDirectory);
 
 		insertNodes(nodes);
@@ -156,20 +157,20 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
-	public void addInput(Node node, FileInformation fileInformation) {
-		if(inputs.get(fileInformation) == null) {
-			inputs.put(fileInformation, new HashSet<FileInputChannel>());
+	public void addInput(Node node, Filename filename) {
+		if(inputs.get(filename) == null) {
+			inputs.put(filename, new HashSet<FileInputChannel>());
 		}
 
-		FileInputChannel inputChannel = new FileInputChannel(fileInformation);
+		FileInputChannel inputChannel = new FileInputChannel(filename);
 
 		node.addInputChannel(inputChannel);
 
-		inputs.get(fileInformation).add(inputChannel);
+		inputs.get(filename).add(inputChannel);
 		fileConsumers.add(node);
 	}
 
-	public Set<FileInformation> getInputFilenames() {
+	public Set<Filename> getInputFilenames() {
 		return inputs.keySet();
 	}
 
@@ -177,7 +178,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return fileConsumers;
 	}
 
-	public void addOutput(Node node, FileInformation fileOutput) throws OverlapingFilesException {
+	public void addOutput(Node node, Filename fileOutput) throws OverlapingFilesException {
 		if(outputs.get(fileOutput) != null) {
 			throw new OverlapingFilesException(fileOutput);
 		}
@@ -190,7 +191,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		fileProducers.add(node);
 	}
 
-	public Set<FileInformation> getOutputFilenames() {
+	public Set<Filename> getOutputFilenames() {
 		return outputs.keySet();
 	}
 
@@ -227,8 +228,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	public void finalize() throws OverlapingFilesException {
 		// Check if input or output filenames overlap
 
-		for(FileInformation inputFilename: getInputFilenames()) {
-			for(FileInformation outputFilename: getOutputFilenames()) {
+		for(Filename inputFilename: getInputFilenames()) {
+			for(Filename outputFilename: getOutputFilenames()) {
 				if(inputFilename.equals(outputFilename)) {
 					throw new OverlapingFilesException(inputFilename);
 				}
@@ -253,7 +254,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 				target.addInputChannel(new TCPInputChannel(source.getName()));
 				break;
 			case FILE:
-				FileInformation anonymous = FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat", baseDirectory.getProtocol());
+				Filename anonymous = FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat", baseDirectory.getProtocol());
 
 				source.addOutputChannel(new FileOutputChannel(anonymous));
 				target.addInputChannel(new FileInputChannel(anonymous));
@@ -267,8 +268,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	}
 
 	public void relinkOutputsInputs() {
-		List<FileInformation> inputFilenames = new ArrayList<FileInformation>(getInputFilenames());
-		List<FileInformation> outputFilenames = new ArrayList<FileInformation>(getOutputFilenames());
+		List<Filename> inputFilenames = new ArrayList<Filename>(getInputFilenames());
+		List<Filename> outputFilenames = new ArrayList<Filename>(getOutputFilenames());
 
 		List<Node> listFileConsumers = new ArrayList<Node>(fileConsumers);
 

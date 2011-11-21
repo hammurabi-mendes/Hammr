@@ -14,28 +14,28 @@ package communication.channel;
 import java.io.IOException;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
+import utilities.Filename;
 
 public class FileInputChannel extends InputChannel {
 	private static final long serialVersionUID = 1L;
 
-	protected FileInformation fileInformation;
+	protected Filename filename;
 
-	public FileInputChannel(FileInformation fileInformation) {
-		super(fileInformation.getLocation());
+	public FileInputChannel(Filename filename) {
+		super(filename.getLocation());
 
-		this.fileInformation = fileInformation;
+		this.filename = filename;
 	}
 
-	public final FileInformation getFileInformation() {
-		return fileInformation;
+	public final Filename getFileInformation() {
+		return filename;
 	}
 
 	public final long getLength(){
-		return FileHelper.getLength(fileInformation);
+		return FileHelper.length(filename);
 	}
 
 	public final boolean remove() throws IOException {
-		return FileHelper.remove(fileInformation);
+		return FileHelper.remove(filename);
 	}
 }

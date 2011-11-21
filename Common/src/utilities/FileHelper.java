@@ -12,56 +12,55 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package utilities;
 
 import java.io.File;
+
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import appspecs.DirectoryInformation;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 public class FileHelper {
-	public static boolean exists(FileInformation input) {
-		File file = new File(input);
+	public static Filename getFileInformation(String path, String file, Protocol protocol) {
+		boolean slashPresent = path.endsWith("/");
+
+		return new Filename((slashPresent ? path : path + "/") + file, protocol);
+	}
+
+	public static Directory getDirectoryInformation(String string, Protocol protocol) {
+		return new Directory(string, protocol);
+	}
+
+	public static InputStream openR(Filename filename) throws FileNotFoundException {
+		return new FileInputStream(filename.getLocation());
+	}
+
+	public static OutputStream openW(Filename filename) throws FileNotFoundException {
+		return new FileOutputStream(filename.getLocation());
+	}
+
+	public static boolean exists(Filename filename) {
+		File file = new File(filename.getLocation());
 
 		return file.exists();
 	}
 
-	public static FileInformation getFileInformation(String path, String file) {
-		return getFileInformation(path, file, FileProtocol.POSIX_COMPATIBLE);
+	public static long length(Filename filename) {
+		File file = new File(filename.getLocation());
+
+		return file.length();
 	}
 
-	public static FileInformation getFileInformation(String path, String file, FileProtocol protocol) {
-		boolean slashPresent = path.endsWith("/");
-
-		return new FileInformation((slashPresent ? path : path + "/") + file, protocol);
-	}
-
-	public static boolean move(FileInformation source, FileInformation target) {
-		File fileSource = new File(source);
-		File fileTarget = new File(target);
+	public static boolean move(Filename source, Filename target) {
+		File fileSource = new File(source.getLocation());
+		File fileTarget = new File(target.getLocation());
 
 		return fileSource.renameTo(fileTarget);
 	}
 
-	public static InputStream openR(FileInformation fileInformation) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	public static boolean remove(Filename filename) {
+		File file = new File(filename.getLocation());
 
-	public static OutputStream openW(FileInformation fileInformation) {
-		// TODO Auto-generated method stub
-		return null;
+		return file.delete();
 	}
-
-	public static long getLength(FileInformation fileInformation) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	public static boolean remove(FileInformation fileInformation) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	public static DirectoryInformation getDirectoryInformation(String string) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+}

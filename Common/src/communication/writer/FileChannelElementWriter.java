@@ -11,10 +11,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package communication.writer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
+import utilities.Filename;
 
 import communication.channel.ChannelElement;
 import communication.interfaces.ChannelElementWriter;
@@ -24,8 +25,8 @@ import communication.stream.ChannelElementOutputStream;
 public final class FileChannelElementWriter implements ChannelElementWriter {
 	private final ChannelElementOutputStream channelElementOutputStream;
 
-	public FileChannelElementWriter(FileInformation fileInformation) throws IOException {
-		channelElementOutputStream = new ChannelElementOutputStream(FileHelper.openW(fileInformation));
+	public FileChannelElementWriter(Filename filename) throws FileNotFoundException, IOException {
+		channelElementOutputStream = new ChannelElementOutputStream(FileHelper.openW(filename));
 	}
 
 	public synchronized boolean write(ChannelElement channelElement) throws IOException {

@@ -16,8 +16,8 @@ import appspecs.Node;
 
 import enums.CommunicationType;
 
-import utilities.FileInformation;
-import utilities.DirectoryInformation;
+import utilities.Filename;
+import utilities.Directory;
 
 import exceptions.InexistentInputException;
 import exceptions.OverlapingFilesException;
@@ -32,11 +32,11 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	private Node[] mergeStage;
 
-	public MapReduceSpecification(String name, DirectoryInformation baseDirectory) {
+	public MapReduceSpecification(String name, Directory baseDirectory) {
 		super(name, baseDirectory);
 	}
 
-	public void insertMappers(FileInformation input, Node splitter, Node[] mappers) throws InexistentInputException {
+	public void insertMappers(Filename input, Node splitter, Node[] mappers) throws InexistentInputException {
 		stageSplitter(splitter);
 
 		addInput(splitter, input);
@@ -46,7 +46,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		insertEdges(splitStage, mapStage, CommunicationType.FILE);
 	}
 
-	public void insertMappers(FileInformation[] inputs, Node[] mappers) throws InexistentInputException {
+	public void insertMappers(Filename[] inputs, Node[] mappers) throws InexistentInputException {
 		stageMappers(mappers);
 
 		for(int i = 0; i < inputs.length; i++) {
@@ -54,7 +54,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		}
 	}
 
-	public void insertReducers(FileInformation output, Node merger, Node[] reducers) throws OverlapingFilesException {
+	public void insertReducers(Filename output, Node merger, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		stageMerger(merger);
@@ -64,7 +64,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 		insertEdges(reduceStage, mergeStage, CommunicationType.FILE);
 	}
 
-	public void insertReducers(FileInformation[] outputs, Node[] reducers) throws OverlapingFilesException {
+	public void insertReducers(Filename[] outputs, Node[] reducers) throws OverlapingFilesException {
 		stageReducers(reducers);
 
 		for(int i = 0; i < outputs.length; i++) {

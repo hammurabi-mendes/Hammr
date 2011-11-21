@@ -37,17 +37,17 @@ import mapreduce.programs.counting.CountingMerger;
 import mapreduce.programs.counting.CountingReducer;
 
 import utilities.FileHelper;
-import utilities.FileInformation;
-import utilities.DirectoryInformation;
+import utilities.Filename;
+import utilities.Directory;
 
 import utilities.RMIHelper;
 
 public class Client {
 	private String registryLocation;
 
-	private DirectoryInformation baseDirectory;
+	private Directory baseDirectory;
 
-	public Client(String registryLocation, DirectoryInformation baseDirectory) {
+	public Client(String registryLocation, Directory baseDirectory) {
 		this.registryLocation = registryLocation;
 
 		this.baseDirectory = baseDirectory;
@@ -58,8 +58,8 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test1", baseDirectory);
 
-		FileInformation inputFilename;
-		FileInformation outputFilename;
+		Filename inputFilename;
+		Filename outputFilename;
 
 		Node[] nodesStage1 = new Node[1];
 
@@ -110,8 +110,8 @@ public class Client {
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", baseDirectory);
 
-		FileInformation inputFilename;
-		FileInformation outputFilename;
+		Filename inputFilename;
+		Filename outputFilename;
 
 		Node[] nodesStage1 = new Node[1];
 
@@ -180,7 +180,7 @@ public class Client {
 
 		applicationSpecification.insertNodes(nodes);
 
-		FileInformation inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "fake-input.dat", baseDirectory.getProtocol());
+		Filename inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), "fake-input.dat", baseDirectory.getProtocol());
 
 		applicationSpecification.addInput(nodes[0], inputFilename);
 
@@ -250,7 +250,7 @@ public class Client {
 		try {
 			// Create the input filenames
 
-			FileInformation[] inputFilenames = new FileInformation[numberMappers];
+			Filename[] inputFilenames = new Filename[numberMappers];
 
 			for(int i = 0; i < inputs.length; i++) {
 				inputFilenames[i] = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i], baseDirectory.getProtocol());
@@ -278,7 +278,7 @@ public class Client {
 			else {
 				// Append a ".out" extension to the input filenames to form the output filenames
 
-				FileInformation[] outputFilenames = new FileInformation[numberReducers];
+				Filename[] outputFilenames = new Filename[numberReducers];
 
 				for(int i = 0; i < inputs.length; i++) {
 					outputFilenames[i] = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i] + ".out", baseDirectory.getProtocol());
@@ -324,7 +324,7 @@ public class Client {
 		String command = arguments[2];
 
 		if(command.equals("test1")) {
-			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
+			Client client = new Client(registryLocation, new Directory(baseDirectory));
 
 			client.performTest1();
 
@@ -332,7 +332,7 @@ public class Client {
 		}
 
 		if(command.equals("test2")) {
-			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
+			Client client = new Client(registryLocation, new Directory(baseDirectory));
 
 			client.performTest2(CommunicationType.TCP);
 
@@ -346,7 +346,7 @@ public class Client {
 				System.exit(1);
 			}
 
-			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
+			Client client = new Client(registryLocation, new Directory(baseDirectory));
 
 			int numberNodesEdges = Integer.parseInt(arguments[3]);
 
@@ -364,7 +364,7 @@ public class Client {
 				System.exit(1);
 			}
 
-			Client client = new Client(registryLocation, new DirectoryInformation(baseDirectory));
+			Client client = new Client(registryLocation, new Directory(baseDirectory));
 
 			MapReduceSpecification.Type type = MapReduceSpecification.Type.FILEBASED;
 

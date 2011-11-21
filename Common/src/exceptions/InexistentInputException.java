@@ -14,20 +14,20 @@ package exceptions;
 import java.util.List;
 import java.util.ArrayList;
 
-import utilities.FileInformation;
+import utilities.Filename;
 
 public class InexistentInputException extends Exception {
 	private static final long serialVersionUID = 1L;
 
-	private List<FileInformation> filenames;
+	private List<Filename> filenames;
 
-	public InexistentInputException(FileInformation filename) {
-		this.filenames = new ArrayList<FileInformation>();
+	public InexistentInputException(Filename filename) {
+		this.filenames = new ArrayList<Filename>();
 
 		this.filenames.add(filename);
 	}
 
-	public InexistentInputException(List<FileInformation> filenames) {
+	public InexistentInputException(List<Filename> filenames) {
 		this.filenames = filenames;
 	}
 

@@ -11,14 +11,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package exceptions;
 
-import utilities.FileInformation;
+import utilities.Filename;
 
 public class OverlapingFilesException extends Exception {
 	private static final long serialVersionUID = 1L;
 
-	private FileInformation filename;
+	private Filename filename;
 
-	public OverlapingFilesException(FileInformation filename) {
+	public OverlapingFilesException(Filename filename) {
 		this.filename = filename;
 	}
 
