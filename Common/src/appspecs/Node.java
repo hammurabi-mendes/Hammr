@@ -25,9 +25,9 @@ import communication.channel.ChannelElement;
 
 import communication.channel.InputChannel;
 import communication.channel.OutputChannel;
+import communication.shufflers.ChannelElementReaderShuffler;
+import communication.shufflers.ChannelElementWriterShuffler;
 
-import utilities.ChannelElementReaderShuffler;
-import utilities.ChannelElementWriterShuffler;
 
 import utilities.MutableInteger;
 

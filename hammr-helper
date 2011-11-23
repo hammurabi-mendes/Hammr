@@ -9,6 +9,7 @@ COMMONDIR="$BASEDIR/Common/bin/"
 LIBDIR="$BASEDIR/lib/"
 
 JGRAPHFILE="$LIBDIR/jgrapht-jdk1.6.jar"
+HADOOPFILE="$LIBDIR/hadoop-0.20.2-core.jar"
 
 BINDIRS=$COMMONDIR:$BASEDIR/Client/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bin
 
@@ -17,14 +18,16 @@ HEAPPARAMS="-XX:-UseGCOverheadLimit -Xms2500M -Xmx2500M"
 
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
-CLASSPATH=$BINDIRS:$JGRAPHFILE
+export CLASSPATH=$BINDIRS:$JGRAPHFILE:$HADOOPFILE
 
 Compile() {
-	ant -buildfile $BASEDIR/Common/build.xml   && \
-	ant -buildfile $BASEDIR/Client/build.xml   && \
-	ant -buildfile $BASEDIR/Manager/build.xml  && \
-	ant -buildfile $BASEDIR/Launcher/build.xml && \
-	jar xf $JGRAPHFILE && rm -r META-INF && mv org $COMMONDIR
+	ant -buildfile $BASEDIR/Common/build.xml         && \
+	ant -buildfile $BASEDIR/Client/build.xml         && \
+	ant -buildfile $BASEDIR/Manager/build.xml        && \
+	ant -buildfile $BASEDIR/Launcher/build.xml       && \
+	mkdir $COMMONDIR/org                             && \
+	cp -r $LIBDIR/hadoop-org/apache $COMMONDIR/org   && \
+	cp -r $LIBDIR/jgrapht-org/jgrapht $COMMONDIR/org
 }
 
 Clean() {
@@ -49,17 +52,17 @@ RunManager() {
 
 	echo "Running manager: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $REGISTRYLOC $RUNNINGDIR $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.manager.basedir=$BASEDIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $@ &
 }
 
 RunLauncher() {
 	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $REGISTRYLOC $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $@ &
 }
 
 RunClient() {
 	echo "Running client: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $REGISTRYLOC $RUNNINGDIR $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.client.basedir=$RUNNINGDIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $@ &
 }
 
 RunGenInput() {

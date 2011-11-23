@@ -42,10 +42,10 @@ import appspecs.Decider;
 import appspecs.Node;
 import appspecs.Edge;
 
-import utilities.FileHelper;
-import utilities.Filename;
-
 import utilities.MutableInteger;
+
+import utilities.filesystem.FileHelper;
+import utilities.filesystem.Filename;
 
 import interfaces.Launcher;
 

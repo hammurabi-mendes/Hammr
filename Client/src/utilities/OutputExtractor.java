@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -7,12 +7,12 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package utilities;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -20,16 +20,22 @@ import java.io.FileWriter;
 import java.io.EOFException;
 import java.io.IOException;
 
-import communication.ChannelElement;
-import communication.FileChannelElementReader;
+import utilities.filesystem.Filename;
+import utilities.filesystem.Directory;
+
+import utilities.filesystem.FileHelper;
+
+import communication.channel.ChannelElement;
+
+import communication.readers.FileChannelElementReader;
 
 public abstract class OutputExtractor {
-	private String[] inputs;
-	private String[] outputs;
+	private Filename[] inputs;
+	private Filename[] outputs;
 
-	public OutputExtractor(String[] inputsOutputs) {
-		List<String> inputList = new ArrayList<String>();
-		List<String> outputList = new ArrayList<String>();
+	public OutputExtractor(Directory directory, String[] inputsOutputs) {
+		List<Filename> inputList = new ArrayList<Filename>();
+		List<Filename> outputList = new ArrayList<Filename>();
 
 		boolean foundColum = false;
 
@@ -41,10 +47,10 @@ public abstract class OutputExtractor {
 			}
 
 			if(!foundColum) {
-				inputList.add(inputsOutputs[i]);
+				inputList.add(FileHelper.getFileInformation(directory.getPath(), inputsOutputs[i], directory.getProtocol()));
 			}
 			else {
-				outputList.add(inputsOutputs[i]);
+				outputList.add(FileHelper.getFileInformation(directory.getPath(), inputsOutputs[i], directory.getProtocol()));
 			}
 		}	
 
@@ -60,11 +66,11 @@ public abstract class OutputExtractor {
 			System.exit(1);
 		}
 
-		this.inputs = inputList.toArray(new String[inputList.size()]);
-		this.outputs = outputList.toArray(new String[outputList.size()]);
+		this.inputs = inputList.toArray(new Filename[inputList.size()]);
+		this.outputs = outputList.toArray(new Filename[outputList.size()]);
 	}
 
-	public OutputExtractor(String[] inputs, String[] outputs) {
+	public OutputExtractor(Filename[] inputs, Filename[] outputs) {
 		this.inputs = inputs;
 		this.outputs = outputs;
 	}
@@ -79,7 +85,7 @@ public abstract class OutputExtractor {
 		BufferedWriter[] writers = new BufferedWriter[outputs.length];
 
 		for(int i = 0; i < outputs.length; i++) {
-			writers[i] = new BufferedWriter(new FileWriter(outputs[i], true));
+			writers[i] = new BufferedWriter(new FileWriter(outputs[i].getLocation(), true));
 		}
 
 		for(int i = 0; i < readers.length; i++) {

@@ -9,34 +9,32 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package utilities;
+package utilities.filesystem.hdfs;
 
-public class Directory {
-	private String path;
-	private Protocol protocol;
+public class HDFSBlockLocation {
+	private final String[] hosts;
 
-	public Directory(String location) {
-		this(location, Protocol.POSIX_COMPATIBLE);
+	private final long offset;
+
+	private final long length;
+
+	HDFSBlockLocation(String[] hosts, long offset, long length){
+		this.hosts = hosts;
+
+		this.offset = offset;
+
+		this.length = length;
 	}
 
-	public Directory(String location, Protocol protocol) {
-		this.path = location;
-		this.protocol = protocol;
+	public String[] getHosts(){
+		return hosts;
 	}
 
-	public String getPath() {
-		return path;
+	public long getOffset(){
+		return offset;
 	}
 
-	public Protocol getProtocol() {
-		return protocol;
-	}
-
-	public boolean equals(Directory other) {
-		return (this.getPath() == other.getPath() && this.getProtocol() == other.getProtocol());
-	}
-
-	public int hashCode() {
-		return path.hashCode() + protocol.hashCode();
+	public long getLength(){
+		return length;
 	}
 }

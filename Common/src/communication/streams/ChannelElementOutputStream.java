@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011, Hammurabi Mendes
+Copyright (c) 2010, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -9,44 +9,32 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package utilities.counting;
+package communication.streams;
 
 import java.io.IOException;
 
-import utilities.OutputExtractor;
+import java.io.OutputStream;
+import java.io.ObjectOutputStream;
 
 import communication.channel.ChannelElement;
 
-import mapreduce.communication.MRChannelElement;
+public class ChannelElementOutputStream extends ObjectOutputStream {
+	private static long DEFAULT_WRITE_COUNT_FLUSH = 65535;
 
-import utilities.filesystem.Filename;
-import utilities.filesystem.Directory;
+	private long writeCounter = 0L;
 
-public class CountingOutputExtractor extends OutputExtractor {
-	public CountingOutputExtractor(Directory directory, String[] inputOutputPairs) {
-		super(directory, inputOutputPairs);
+	public ChannelElementOutputStream(OutputStream outputStream) throws IOException {
+		super(outputStream);
 	}
 
-	public CountingOutputExtractor(Filename[] inputs, Filename[] outputs) {
-		super(inputs, outputs);
-	}
+	public void writeChannelElement(ChannelElement channelElement) throws IOException {
+		writeCounter++;
 
-	protected String obtainInformation(ChannelElement genericChannelElement) {
-		@SuppressWarnings("unchecked")
-		MRChannelElement<String,Long> channelElement = (MRChannelElement<String,Long>) genericChannelElement;
-
-		return (channelElement.getObject()) +  " - " + channelElement.getValue() + "\n";
-	}
-
-	public static void main(String[] arguments) {
-		CountingOutputExtractor extractor = new CountingOutputExtractor(new Directory("."), arguments);
-
-		try {
-			extractor.run();
-		} catch (IOException exception) {
-			System.err.println("Error generating input");
-
-			exception.printStackTrace();
+		if((writeCounter % DEFAULT_WRITE_COUNT_FLUSH) == 0) {
+			flush();
+			reset();
 		}
+
+		writeObject(channelElement);
 	}
 }

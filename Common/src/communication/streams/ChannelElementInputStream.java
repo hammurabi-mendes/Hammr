@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011, Hammurabi Mendes
+Copyright (c) 2010, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -9,34 +9,30 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package utilities;
+package communication.streams;
 
-public class Filename {
-	private String location;
-	private Protocol protocol;
+import java.io.IOException;
+import java.io.EOFException;
 
-	public Filename(String location) {
-		this(location, Protocol.POSIX_COMPATIBLE);
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+
+import communication.channel.ChannelElement;
+
+public class ChannelElementInputStream extends ObjectInputStream {
+	public ChannelElementInputStream(InputStream inputStream) throws IOException {
+		super(inputStream);
 	}
 
-	public Filename(String location, Protocol protocol) {
-		this.location = location;
-		this.protocol = protocol;
-	}
+	public ChannelElement readChannelElement() throws EOFException, IOException {
+		try {
+			return (ChannelElement) readObject();
+		} catch (ClassNotFoundException exception) {
+			System.err.println("Error reading from channel: unknown class");
 
-	public String getLocation() {
-		return location;
-	}
+			exception.printStackTrace();
 
-	public Protocol getProtocol() {
-		return protocol;
-	}
-
-	public boolean equals(Filename other) {
-		return (this.getLocation() == other.getLocation() && this.getProtocol() == other.getProtocol());
-	}
-
-	public int hashCode() {
-		return location.hashCode() + protocol.hashCode();
+			return null;
+		}
 	}
 }

@@ -35,14 +35,14 @@ import communication.channel.TCPOutputChannel;
 import communication.channel.FileInputChannel;
 import communication.channel.FileOutputChannel;
 
-import communication.writer.SHMChannelElementWriter;
-import communication.reader.SHMChannelElementMultiplexer;
 
-import communication.writer.TCPChannelElementWriter;
-import communication.reader.TCPChannelElementMultiplexer;
 
-import communication.reader.FileChannelElementReader;
-import communication.writer.FileChannelElementWriter;
+import communication.readers.FileChannelElementReader;
+import communication.readers.SHMChannelElementMultiplexer;
+import communication.readers.TCPChannelElementMultiplexer;
+import communication.writers.FileChannelElementWriter;
+import communication.writers.SHMChannelElementWriter;
+import communication.writers.TCPChannelElementWriter;
 
 import appspecs.Node;
 

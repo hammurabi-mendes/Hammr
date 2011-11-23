@@ -11,7 +11,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package exceptions;
 
-import utilities.Filename;
+import utilities.filesystem.Filename;
 
 public class OverlapingFilesException extends Exception {
 	private static final long serialVersionUID = 1L;

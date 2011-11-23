@@ -25,10 +25,10 @@ import java.util.ArrayList;
 
 import org.jgrapht.graph.*;
 
-import utilities.FileHelper;
-import utilities.Filename;
-import utilities.Directory;
-import utilities.Protocol;
+import utilities.filesystem.Directory;
+import utilities.filesystem.FileHelper;
+import utilities.filesystem.Filename;
+import utilities.filesystem.Protocol;
 
 import communication.channel.SHMInputChannel;
 import communication.channel.SHMOutputChannel;

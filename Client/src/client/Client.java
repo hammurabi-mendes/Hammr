@@ -36,9 +36,9 @@ import mapreduce.programs.counting.CountingMapper;
 import mapreduce.programs.counting.CountingMerger;
 import mapreduce.programs.counting.CountingReducer;
 
-import utilities.FileHelper;
-import utilities.Filename;
-import utilities.Directory;
+import utilities.filesystem.Directory;
+import utilities.filesystem.FileHelper;
+import utilities.filesystem.Filename;
 
 import utilities.RMIHelper;
 
@@ -311,17 +311,11 @@ public class Client {
 	}
 
 	public static void main(String[] arguments) {
-		if(arguments.length <= 2) {
-			System.err.println("Usage: Client <registry_location> <base_directory> <command> [<command_argument> ... <comand_argument>]");
+		String registryLocation = System.getProperty("java.rmi.server.location");
 
-			System.exit(1);
-		}
+		String baseDirectory = System.getProperty("hammr.client.basedir"); 
 
-		String registryLocation = arguments[0];
-
-		String baseDirectory = arguments[1];
-
-		String command = arguments[2];
+		String command = arguments[1];
 
 		if(command.equals("test1")) {
 			Client client = new Client(registryLocation, new Directory(baseDirectory));
@@ -340,8 +334,8 @@ public class Client {
 		}
 
 		if(command.equals("test3")) {
-			if(arguments.length <= 3) {
-				System.err.println("Usage: Client <registry_location> <base_directory> test3 <number_nodes_edges>");
+			if(arguments.length <= 1) {
+				System.err.println("Usage: Client test3 <number_nodes_edges>");
 
 				System.exit(1);
 			}
@@ -356,8 +350,8 @@ public class Client {
 		}
 
 		if(command.equals("perform_mapreduce")) {
-			if(arguments.length <= 5) {
-				System.err.println("Usage: Client <registry_location> <base_directory> perform_mapreduce <type> <join> [<input_filename> ... <input_filename>]");
+			if(arguments.length <= 3) {
+				System.err.println("Usage: Client perform_mapreduce <type> <join> [<input_filename> ... <input_filename>]");
 				System.err.println("<type>: \"TCP\" or \"FILE\"");
 				System.err.println("<join> \"true\" or \"false\"");
 
@@ -368,10 +362,10 @@ public class Client {
 
 			MapReduceSpecification.Type type = MapReduceSpecification.Type.FILEBASED;
 
-			if(arguments[3].equals("TCP")) {
+			if(arguments[1].equals("TCP")) {
 				type = MapReduceSpecification.Type.TCPBASED;
 			}
-			else if(arguments[3].equals("FILE")) {
+			else if(arguments[1].equals("FILE")) {
 				type = MapReduceSpecification.Type.FILEBASED;
 			}
 			else {
@@ -382,10 +376,10 @@ public class Client {
 
 			boolean join = false;
 
-			if(arguments[4].equals("true")) {
+			if(arguments[2].equals("true")) {
 				join = true;
 			}
-			else if(arguments[4].equals("false")) {
+			else if(arguments[2].equals("false")) {
 				join = false;
 			}
 			else {
@@ -396,7 +390,7 @@ public class Client {
 
 			List<String> temporaryInputFilenames = new ArrayList<String>();
 
-			for(int i = 5; i < arguments.length; i++) {
+			for(int i = 3; i < arguments.length; i++) {
 				temporaryInputFilenames.add(arguments[i]);
 			}
 

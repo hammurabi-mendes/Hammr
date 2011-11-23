@@ -9,37 +9,41 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package communication.writer;
+package communication.writers;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import utilities.filesystem.FileHelper;
+import utilities.filesystem.Filename;
 
 import communication.channel.ChannelElement;
 import communication.interfaces.ChannelElementWriter;
 
-import communication.reader.SHMChannelElementMultiplexer;
+import communication.streams.ChannelElementOutputStream;
 
-public class SHMChannelElementWriter implements ChannelElementWriter {
-	private String name;
-	private SHMChannelElementMultiplexer channelElementMultiplexer;
+public final class FileChannelElementWriter implements ChannelElementWriter {
+	private final ChannelElementOutputStream channelElementOutputStream;
 
-	public SHMChannelElementWriter(String name, SHMChannelElementMultiplexer shmChannelElementMultiplexer) {
-		this.name = name;
-
-		this.channelElementMultiplexer = shmChannelElementMultiplexer;
+	public FileChannelElementWriter(Filename filename) throws FileNotFoundException, IOException {
+		channelElementOutputStream = new ChannelElementOutputStream(FileHelper.openW(filename));
 	}
 
-	public boolean write(ChannelElement channelElement) throws IOException {
-		channelElementMultiplexer.write(name, channelElement);
+	public synchronized boolean write(ChannelElement channelElement) throws IOException {
+		channelElementOutputStream.writeChannelElement(channelElement);
 
 		return true;
 	}
 
-	public boolean flush() throws IOException {
+	public synchronized boolean flush() throws IOException {
+		channelElementOutputStream.flush();
+
 		return true;
 	}
 
-	public boolean close() throws IOException {
-		channelElementMultiplexer.close(name);
+	public synchronized boolean close() throws IOException {
+		channelElementOutputStream.flush();
+		channelElementOutputStream.close();
 
 		return true;
 	}

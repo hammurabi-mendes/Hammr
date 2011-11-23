@@ -16,8 +16,8 @@ import appspecs.Node;
 
 import enums.CommunicationType;
 
-import utilities.Filename;
-import utilities.Directory;
+import utilities.filesystem.Directory;
+import utilities.filesystem.Filename;
 
 import exceptions.InexistentInputException;
 import exceptions.OverlapingFilesException;

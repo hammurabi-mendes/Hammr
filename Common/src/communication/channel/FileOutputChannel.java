@@ -13,8 +13,8 @@ package communication.channel;
 
 import java.io.IOException;
 
-import utilities.FileHelper;
-import utilities.Filename;
+import utilities.filesystem.FileHelper;
+import utilities.filesystem.Filename;
 
 public class FileOutputChannel extends OutputChannel {
 	private static final long serialVersionUID = 1L;

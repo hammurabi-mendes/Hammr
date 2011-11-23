@@ -9,30 +9,58 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package communication.stream;
+package communication.writers;
+
+import java.net.Socket;
+import java.net.InetSocketAddress;
 
 import java.io.IOException;
-import java.io.EOFException;
-
-import java.io.InputStream;
-import java.io.ObjectInputStream;
 
 import communication.channel.ChannelElement;
+import communication.interfaces.ChannelElementWriter;
 
-public class ChannelElementInputStream extends ObjectInputStream {
-	public ChannelElementInputStream(InputStream inputStream) throws IOException {
-		super(inputStream);
+import communication.streams.ChannelElementOutputStream;
+
+public class TCPChannelElementWriter implements ChannelElementWriter {
+	private String name;
+	private ChannelElementOutputStream channelElementOutputStream;
+
+	public TCPChannelElementWriter(String name, InetSocketAddress socketAddress) throws IOException {
+		this.name = name;
+
+		Socket socket = new Socket(socketAddress.getAddress(), socketAddress.getPort());
+
+		this.channelElementOutputStream = new ChannelElementOutputStream(socket.getOutputStream());
+
+		channelElementOutputStream.writeObject(name);
 	}
 
-	public ChannelElement readChannelElement() throws EOFException, IOException {
-		try {
-			return (ChannelElement) readObject();
-		} catch (ClassNotFoundException exception) {
-			System.err.println("Error reading from channel: unknown class");
+	public String getName() {
+		return name;
+	}
 
-			exception.printStackTrace();
+	public void setName(String name) {
+		this.name = name;
+	}
 
-			return null;
-		}
+	public boolean write(ChannelElement channelElement) throws IOException {
+		channelElementOutputStream.writeChannelElement(channelElement);
+
+		return true;
+	}
+
+	public boolean flush() throws IOException {
+		channelElementOutputStream.flush();
+		channelElementOutputStream.reset();
+
+		return true;
+	}
+
+	public boolean close() throws IOException {
+		channelElementOutputStream.flush();
+
+		channelElementOutputStream.close();
+
+		return true;
 	}
 }

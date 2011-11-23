@@ -14,7 +14,7 @@ package exceptions;
 import java.util.List;
 import java.util.ArrayList;
 
-import utilities.Filename;
+import utilities.filesystem.Filename;
 
 public class InexistentOutputException extends Exception {
 	private static final long serialVersionUID = 1L;
