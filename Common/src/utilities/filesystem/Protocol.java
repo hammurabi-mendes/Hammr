@@ -15,4 +15,15 @@ import java.io.Serializable;
 
 public enum Protocol implements Serializable {
 	POSIX_COMPATIBLE, HDFS;
+
+	public String toString() {
+		switch(this) {
+		case POSIX_COMPATIBLE:
+			return "file://";
+		case HDFS:
+			return "hdfs://";
+		}
+
+		throw new IllegalStateException();
+	}
 }

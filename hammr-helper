@@ -26,7 +26,6 @@ Compile() {
 	ant -buildfile $BASEDIR/Manager/build.xml        && \
 	ant -buildfile $BASEDIR/Launcher/build.xml       && \
 	mkdir $COMMONDIR/org                             && \
-	cp -r $LIBDIR/hadoop-org/apache $COMMONDIR/org   && \
 	cp -r $LIBDIR/jgrapht-org/jgrapht $COMMONDIR/org
 }
 

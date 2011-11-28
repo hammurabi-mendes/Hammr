@@ -162,7 +162,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 			inputs.put(filename, new HashSet<FileInputChannel>());
 		}
 
-		FileInputChannel inputChannel = new FileInputChannel(filename);
+		FileInputChannel inputChannel = new FileInputChannel(filename.getLocation(), filename);
 
 		node.addInputChannel(inputChannel);
 
@@ -178,16 +178,16 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return fileConsumers;
 	}
 
-	public void addOutput(Node node, Filename fileOutput) throws OverlapingFilesException {
-		if(outputs.get(fileOutput) != null) {
-			throw new OverlapingFilesException(fileOutput);
+	public void addOutput(Node node, Filename filename) throws OverlapingFilesException {
+		if(outputs.get(filename) != null) {
+			throw new OverlapingFilesException(filename);
 		}
 
-		FileOutputChannel outputChannel = new FileOutputChannel(fileOutput);
+		FileOutputChannel outputChannel = new FileOutputChannel(filename.getLocation(), filename);
 
 		node.addOutputChannel(outputChannel);
 
-		outputs.put(fileOutput, outputChannel);
+		outputs.put(filename, outputChannel);
 		fileProducers.add(node);
 	}
 
@@ -256,8 +256,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 			case FILE:
 				Filename anonymous = FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat", baseDirectory.getProtocol());
 
-				source.addOutputChannel(new FileOutputChannel(anonymous));
-				target.addInputChannel(new FileInputChannel(anonymous));
+				source.addOutputChannel(new FileOutputChannel(target.getName(), anonymous));
+				target.addInputChannel(new FileInputChannel(source.getName(), anonymous));
 
 				anonymousFileChannelCounter++;
 

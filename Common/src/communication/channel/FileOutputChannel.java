@@ -21,8 +21,8 @@ public class FileOutputChannel extends OutputChannel {
 
 	protected Filename filename;
 
-	public FileOutputChannel(Filename filename) {
-		super(filename.getLocation());
+	public FileOutputChannel(String name, Filename filename) {
+		super(name);
 
 		this.filename = filename;
 	}

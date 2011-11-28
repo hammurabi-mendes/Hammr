@@ -29,4 +29,8 @@ public class MutableInteger implements Serializable {
 	public int getValue() {
 		return value;
 	}
+	
+	public String toString() {
+		return "" + value;
+	}
 }

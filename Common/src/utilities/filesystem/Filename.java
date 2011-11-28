@@ -43,4 +43,8 @@ public class Filename implements Serializable {
 	public int hashCode() {
 		return location.hashCode() + protocol.hashCode();
 	}
+	
+	public String toString() {
+		return protocol + location;
+	}
 }

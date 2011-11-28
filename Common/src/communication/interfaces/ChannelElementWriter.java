@@ -16,7 +16,7 @@ import java.io.IOException;
 import communication.channel.ChannelElement;
 
 public interface ChannelElementWriter {
-	public abstract boolean write(ChannelElement channelElement) throws IOException;
-	public abstract boolean flush() throws IOException;
-	public abstract boolean close() throws IOException;
+	public boolean write(ChannelElement channelElement) throws IOException;
+	public boolean flush() throws IOException;
+	public boolean close() throws IOException;
 }

@@ -13,6 +13,7 @@ package scheduler;
 
 import java.rmi.RemoteException;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.Map;
 import java.util.List;
@@ -452,40 +453,32 @@ public class ConcreteScheduler implements Scheduler {
 	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
 		nodeGroup.prepareSchedule(serialNumberCounter++);
 
-		while(true) {
+		List<Launcher> currentLaunchers = new ArrayList<Launcher>(concreteManager.getRegisteredLaunchers());
+
+		Collections.shuffle(currentLaunchers);
+
+		for(int i = 0; i < currentLaunchers.size(); i++) {
 			try {
-				Launcher launcher = getRandomLauncher();
+				Launcher launcher = currentLaunchers.get(i);
 
 				scheduledNodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);
 
-				launcher.addNodeGroup(nodeGroup);
+				if(launcher.addNodeGroup(nodeGroup)) {
+					return;
+				}
+				else {
+					System.err.println("Failed using launcher (launcher unusable), trying next one...");
 
-				break;
+					scheduledNodeGroups.remove(nodeGroup.getSerialNumber());
+				}
 			} catch (RemoteException exception) {
-				System.err.println("Failed using launcher, trying next one...");
+				System.err.println("Failed using launcher (launcher unreachable), trying next one...");
 
 				scheduledNodeGroups.remove(nodeGroup.getSerialNumber());
-
-				exception.printStackTrace();
 			}
 		}	
-	}
-
-	/**
-	 * Obtains a random alive Launcher from the Manager.
-	 * 
-	 * @return A random alive Launcher.
-	 * 
-	 * @throws InsufficientLaunchersException If there are no alive Launchers.
-	 */
-	private Launcher getRandomLauncher() throws InsufficientLaunchersException {
-		Launcher launcher =  concreteManager.getRandomLauncher();
-
-		if(launcher == null) {
-			throw new InsufficientLaunchersException();
-		}
-
-		return launcher;
+		
+		throw new InsufficientLaunchersException();
 	}
 
 	/**

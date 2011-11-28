@@ -11,11 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package mapreduce.programs.counting;
 
-import java.io.Serializable;
-
 import mapreduce.programs.Combiner;
 
-public class CountingCombiner<O> extends Combiner<O,Long> implements Serializable {
+public class CountingCombiner<O> extends Combiner<O,Long> {
 	private static final long serialVersionUID = 1L;
 
 	public Long combine(Long oldValue, Long newValue) {

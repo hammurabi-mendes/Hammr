@@ -39,6 +39,8 @@ import interfaces.Manager;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ConcreteLauncher implements Launcher {
+	private static final int NUMBER_SLOTS_DEFAULT = 100;
+
 	private static ConcreteLauncher instance;
 
 	private String id;
@@ -116,7 +118,7 @@ public class ConcreteLauncher implements Launcher {
 
 		nodeGroups = Collections.synchronizedMap(new HashMap<Long, NodeGroup>());
 
-		launcherStatus = new LauncherStatus(id, InetAddress.getLocalHost().getHostName(), "default_rack");
+		launcherStatus = new LauncherStatus(id, InetAddress.getLocalHost().getHostName(), "default_rack", NUMBER_SLOTS_DEFAULT);
 	}
 
 	/**

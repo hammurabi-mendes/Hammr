@@ -21,8 +21,8 @@ public class FileInputChannel extends InputChannel {
 
 	protected Filename filename;
 
-	public FileInputChannel(Filename filename) {
-		super(filename.getLocation());
+	public FileInputChannel(String name, Filename filename) {
+		super(name);
 
 		this.filename = filename;
 	}

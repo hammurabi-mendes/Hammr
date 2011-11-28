@@ -24,11 +24,13 @@ public class LauncherStatus implements Serializable {
 	private int totalSlots;
 	private int ocupiedSlots;
 
-	public LauncherStatus(String launcherId, String host, String rack) {
+	public LauncherStatus(String launcherId, String host, String rack, int totalSlots) {
 		this.launcherId = launcherId;
 
 		this.host = host;
 		this.rack = rack;
+		
+		this.totalSlots = totalSlots;
 	}
 
 	public String getLauncherId() {

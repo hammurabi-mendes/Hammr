@@ -23,8 +23,10 @@ public class Directory implements Serializable {
 		this(location, Protocol.POSIX_COMPATIBLE);
 	}
 
-	public Directory(String location, Protocol protocol) {
-		this.path = location;
+	public Directory(String path, Protocol protocol) {
+		boolean slashPresent = path.endsWith("/");
+
+		this.path = (slashPresent ? path : path + "/");
 		this.protocol = protocol;
 	}
 
@@ -42,5 +44,9 @@ public class Directory implements Serializable {
 
 	public int hashCode() {
 		return path.hashCode() + protocol.hashCode();
+	}
+
+	public String toString() {
+		return protocol + path;
 	}
 }

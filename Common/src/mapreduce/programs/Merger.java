@@ -47,14 +47,14 @@ public abstract class Merger<O,V> extends Node {
 			}
 		}
 
+		String input;
+
 		while(channelElements.size() > 0) {
 			channelElement = channelElements.poll();
 
 			writeSomeone(channelElement);
 
-			String input = backwardMapping.get(channelElement);
-
-			backwardMapping.remove(channelElement);
+			input = backwardMapping.remove(channelElement);
 
 			channelElement = (MRChannelElement<O,V>) read(input);
 

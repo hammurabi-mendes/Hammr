@@ -11,6 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package enums;
 
-public enum CommunicationType {
+import java.io.Serializable;
+
+public enum CommunicationType implements Serializable {
 	SHM, TCP, FILE;
 }

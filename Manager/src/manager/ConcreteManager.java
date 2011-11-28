@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -16,12 +16,12 @@ import interfaces.Manager;
 
 import java.rmi.RemoteException;
 
-import java.util.Random;
 import java.util.Collections;
+import java.util.Collection;
 
 import java.util.Set;
+
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
@@ -31,6 +31,7 @@ import appspecs.ApplicationSpecification;
 
 import exceptions.InexistentInputException;
 import exceptions.InexistentOutputException;
+
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
@@ -57,8 +58,6 @@ public class ConcreteManager implements Manager {
 
 	// Active applications, mapped by name
 	private Map<String, ApplicationInformationHolder> applicationInformationHolders;
-
-	private Random random;
 
 	static {
 		String registryLocation = System.getProperty("java.rmi.server.location");
@@ -106,8 +105,6 @@ public class ConcreteManager implements Manager {
 		this.registeredLaunchers = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
 
 		this.applicationInformationHolders = Collections.synchronizedMap(new HashMap<String, ApplicationInformationHolder>());
-
-		this.random = new Random();
 	}
 
 	/**
@@ -376,36 +373,12 @@ public class ConcreteManager implements Manager {
 	}
 
 	/**
-	 * Obtain the first alive Launcher, selected randomly.
+	 * Returns the list of registered launchers.
 	 * 
-	 * @return The first alive Launcher, selected randomly.
+	 * @return The list of registered launchers.
 	 */
-	public Launcher getRandomLauncher() {
-		ArrayList<Map.Entry<String,Launcher>> aliveLaunchers = new ArrayList<Map.Entry<String,Launcher>>();
-
-		aliveLaunchers.addAll(registeredLaunchers.entrySet());
-
-		while(aliveLaunchers.size() > 0) {
-			int randomIndex = Math.abs(random.nextInt() % aliveLaunchers.size());
-
-			Map.Entry<String,Launcher> randomEntry = aliveLaunchers.get(randomIndex);
-
-			String randomLauncherIdentifier = randomEntry.getKey();
-			Launcher randomLauncherReference = randomEntry.getValue();
-
-			try {
-				assert randomLauncherIdentifier.equals(randomLauncherReference.getId());
-
-				return randomLauncherReference;
-			} catch (RemoteException exception) {
-				System.err.println("Detected failure for launcher " + randomLauncherIdentifier + ", removing it from list...");
-
-				registeredLaunchers.remove(randomLauncherIdentifier);
-				aliveLaunchers.remove(randomEntry);
-			}
-		}
-
-		return null;
+	public Collection<Launcher> getRegisteredLaunchers() {
+		return registeredLaunchers.values();
 	}
 
 	/**

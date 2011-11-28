@@ -23,20 +23,16 @@ import execinfo.NodeGroup;
 public class NodeGroupBundle implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Set<NodeGroup> nodeGroups;
-
-	public NodeGroupBundle() {
-		nodeGroups = new HashSet<NodeGroup>();
-	}
+	private Set<NodeGroup> set;
 
 	public NodeGroupBundle(NodeGroup nodeGroup) {
-		nodeGroups = new HashSet<NodeGroup>();
+		set = new HashSet<NodeGroup>();
 
 		addNodeGroup(nodeGroup);
 	}
 
 	public NodeGroupBundle(Set<NodeGroup> nodeGroups) {
-		nodeGroups = new HashSet<NodeGroup>();
+		set = new HashSet<NodeGroup>();
 
 		addNodeGroups(nodeGroups);
 	}	
@@ -50,7 +46,7 @@ public class NodeGroupBundle implements Serializable {
 
 		nodeGroup.setNodeGroupBundle(this);
 
-		nodeGroups.add(nodeGroup);
+		set.add(nodeGroup);
 
 		return true;
 	}
@@ -67,28 +63,28 @@ public class NodeGroupBundle implements Serializable {
 		for(NodeGroup nodeGroup: nodeGroups) {
 			nodeGroup.setNodeGroupBundle(this);
 
-			nodeGroups.add(nodeGroup);
+			set.add(nodeGroup);
 		}	
 
 		return true;
 	}
 
 	public Set<NodeGroup> getNodeGroups() {
-		return nodeGroups;
+		return set;
 	}
 
 	public Iterator<NodeGroup> getNodeGroupsIterator() {
-		return nodeGroups.iterator();
+		return set.iterator();
 	}
 
 	public int getSize() {
-		return nodeGroups.size();
+		return set.size();
 	}
 
 	public String toString() {
 		String result = "{\n";
 
-		for(NodeGroup nodeGroup: nodeGroups) {
+		for(NodeGroup nodeGroup: set) {
 			result += "\t";
 			result += nodeGroup;
 			result += "\n";

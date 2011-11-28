@@ -27,7 +27,7 @@ import utilities.MutableInteger;
 public class NodeGroup implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Set<Node> nodes;
+	private Set<Node> set;
 
 	private String application;
 	private long serialNumber;
@@ -37,14 +37,14 @@ public class NodeGroup implements Serializable {
 	private NodeGroupBundle nodeGroupBundle;
 
 	public NodeGroup(String application, Node node) {
-		nodes = new HashSet<Node>();
+		set = new HashSet<Node>();
 
 		setApplication(application);
 		addNode(node);
 	}
 
 	public NodeGroup(String application, Set<Node> nodes) {
-		nodes = new HashSet<Node>();
+		set = new HashSet<Node>();
 
 		setApplication(application);
 		addNodes(nodes);
@@ -59,7 +59,7 @@ public class NodeGroup implements Serializable {
 
 		node.setNodeGroup(this);
 
-		nodes.add(node);
+		set.add(node);
 
 		return true;
 	}
@@ -76,22 +76,22 @@ public class NodeGroup implements Serializable {
 		for(Node node: nodes) {
 			node.setNodeGroup(this);
 
-			nodes.add(node);
+			set.add(node);
 		}
 
 		return true;
 	}
 
 	public Set<Node> getNodes() {
-		return nodes;
+		return set;
 	}
 
 	public Iterator<Node> getNodesIterator() {
-		return nodes.iterator();
+		return set.iterator();
 	}
 
 	public int getSize() {
-		return nodes.size();
+		return set.size();
 	}
 
 	public void setApplication(String application) {
