@@ -7,16 +7,19 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package execinfo;
 
 import java.util.Set;
+import java.util.HashSet;
 
 import java.util.Map;
 import java.util.HashMap;
 
 import java.io.Serializable;
+
+import execinfo.aggregators.Aggregator;
 
 public class ResultSummary implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -26,7 +29,11 @@ public class ResultSummary implements Serializable {
 
 	private long nodeGroupTiming;
 
-	private Map<String, NodeMeasurements> nodeTimings;
+	// Maps nodes to individual measurements
+	private Map<String, NodeMeasurements> measurements;
+
+	// Aggregators for the nodes
+	private Set<Aggregator<? extends Object>> aggregators;
 
 	private Type type;
 
@@ -35,7 +42,9 @@ public class ResultSummary implements Serializable {
 		setNodeGroupSerialNumber(nodeGroupSerialNumber);
 
 		if(type == Type.SUCCESS) {
-			nodeTimings = new HashMap<String, NodeMeasurements>();
+			measurements = new HashMap<String, NodeMeasurements>();
+
+			aggregators = new HashSet<Aggregator<? extends Object>>();
 		}
 
 		setType(type);
@@ -74,15 +83,23 @@ public class ResultSummary implements Serializable {
 	}
 
 	public Set<String> getNodeNames() {
-		return nodeTimings.keySet();
+		return measurements.keySet();
 	}
 
 	public NodeMeasurements getNodeMeasurement(String nodeName) {
-		return nodeTimings.get(nodeName);
+		return measurements.get(nodeName);
 	}
 
 	public void addNodeMeasurements(String nodeName, NodeMeasurements nodeMeasurements) {
-		nodeTimings.put(nodeName, nodeMeasurements);
+		measurements.put(nodeName, nodeMeasurements);
+	}
+
+	public Set<Aggregator<? extends Object>> getAggregators() {
+		return aggregators;
+	}
+
+	public void addAggregator(Aggregator<? extends Object> aggregator) {
+		aggregators.add(aggregator);
 	}
 
 	public enum Type {

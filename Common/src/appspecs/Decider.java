@@ -15,19 +15,21 @@ import java.io.Serializable;
 
 import java.util.Map;
 
+import execinfo.aggregators.Aggregator;
+
 public abstract class Decider implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Map<String, Aggregator<?>> aggregatedVariables;
+	private Map<String, Aggregator<? extends Object>> aggregatedVariables;
 
 	private ApplicationSpecification applicationSpecification;
 
-	public Map<String, Aggregator<?>> getAggregatedVariables() {
+	public Map<String, Aggregator<? extends Object>> getAggregatedVariables() {
 		return aggregatedVariables;
 	}
 
-	public void setAggregatedVariables(Map<String, Aggregator<?>> aggregatedVariables) {
-		this.aggregatedVariables = aggregatedVariables;
+	public void setAggregatedVariables(Map<String, Aggregator<? extends Object>> map) {
+		this.aggregatedVariables = map;
 	}
 
 	public ApplicationSpecification getApplicationSpecification() {

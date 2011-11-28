@@ -276,6 +276,8 @@ public class ConcreteManager implements Manager {
 			return false;
 		}
 
+		// Inserts the result summary and updates the aggregators
+
 		applicationInformationHolder.addReceivedResultSummaries(resultSummary);
 
 		try {
@@ -379,6 +381,17 @@ public class ConcreteManager implements Manager {
 	 */
 	public Collection<Launcher> getRegisteredLaunchers() {
 		return registeredLaunchers.values();
+	}
+
+	/**
+	 * Returns the requested application information holder.
+	 * 
+	 * @param application The requested application.
+	 * 
+	 * @return The requested application information holder.
+	 */
+	public ApplicationInformationHolder getApplicationInformationHolder(String application) {
+		return applicationInformationHolders.get(application);
 	}
 
 	/**

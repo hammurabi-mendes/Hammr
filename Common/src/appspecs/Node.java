@@ -28,8 +28,9 @@ import communication.channel.OutputChannel;
 import communication.shufflers.ChannelElementReaderShuffler;
 import communication.shufflers.ChannelElementWriterShuffler;
 
-
 import utilities.MutableInteger;
+
+import execinfo.aggregators.Aggregator;
 
 import execinfo.NodeGroup;
 
@@ -44,7 +45,7 @@ public abstract class Node implements Serializable, Runnable {
 	protected ChannelElementReaderShuffler readersShuffler;
 	protected ChannelElementWriterShuffler writersShuffler;
 
-	private Aggregator<?> aggregator;
+	private Aggregator<? extends Object> aggregator;
 
 	/* Runtime information */
 
@@ -253,11 +254,11 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Aggregator functions */
 
-	public void setAggregator(Aggregator<?> aggregator) {
+	public void setAggregator(Aggregator<? extends Object> aggregator) {
 		this.aggregator = aggregator;
 	}
 
-	public Aggregator<?> getAggregator() {
+	public Aggregator<? extends Object> getAggregator() {
 		return aggregator;
 	}
 

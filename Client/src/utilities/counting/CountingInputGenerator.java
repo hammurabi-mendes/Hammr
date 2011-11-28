@@ -14,8 +14,6 @@ package utilities.counting;
 import java.util.Set;
 import java.util.HashSet;
 
-import java.io.BufferedReader;
-
 import java.io.IOException;
 
 import utilities.InputGenerator;
@@ -34,10 +32,6 @@ public class CountingInputGenerator extends InputGenerator {
 
 	public CountingInputGenerator(Filename[] inputs, Filename[] outputs) {
 		super(inputs, outputs);
-	}
-
-	protected String obtainBuffer(BufferedReader reader) throws IOException {
-		return reader.readLine();
 	}
 
 	protected Set<ChannelElement> generateInput(String buffer) {

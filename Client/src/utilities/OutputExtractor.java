@@ -29,7 +29,7 @@ import communication.channel.ChannelElement;
 
 import communication.readers.FileChannelElementReader;
 
-public abstract class OutputExtractor {
+public class OutputExtractor {
 	private Filename[] inputs;
 	private Filename[] outputs;
 
@@ -111,5 +111,7 @@ public abstract class OutputExtractor {
 		}
 	}
 
-	protected abstract String obtainInformation(ChannelElement channelElement);
+	protected String obtainInformation(ChannelElement channelElement) {
+		return channelElement.toString();
+	}
 }

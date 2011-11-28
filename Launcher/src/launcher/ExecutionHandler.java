@@ -35,12 +35,12 @@ import communication.channel.TCPOutputChannel;
 import communication.channel.FileInputChannel;
 import communication.channel.FileOutputChannel;
 
-
-
 import communication.readers.FileChannelElementReader;
+import communication.writers.FileChannelElementWriter;
+
 import communication.readers.SHMChannelElementMultiplexer;
 import communication.readers.TCPChannelElementMultiplexer;
-import communication.writers.FileChannelElementWriter;
+
 import communication.writers.SHMChannelElementWriter;
 import communication.writers.TCPChannelElementWriter;
 
@@ -49,6 +49,8 @@ import appspecs.Node;
 import execinfo.NodeGroup;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
+
+import execinfo.aggregators.Aggregator;
 
 import interfaces.Manager;
 
@@ -293,6 +295,12 @@ public class ExecutionHandler extends Thread {
 
 		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			resultSummary.addNodeMeasurements(nodeHandlers[i].getNode().getName(), nodeHandlers[i].getNodeMeasurements());
+
+			Aggregator<? extends Object> aggregator = nodeHandlers[i].getNode().getAggregator();
+
+			if(aggregator != null) {
+				resultSummary.addAggregator(aggregator);
+			}
 		}
 
 		return resultSummary;

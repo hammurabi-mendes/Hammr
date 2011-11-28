@@ -14,6 +14,7 @@ package scheduler;
 import java.rmi.RemoteException;
 
 import java.util.Collections;
+
 import java.util.Set;
 import java.util.Map;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.jgrapht.alg.*;
 import org.jgrapht.graph.*;
 
 import enums.CommunicationType;
+
 import execinfo.NodeGroup;
 import execinfo.NodeGroupBundle;
 
@@ -50,10 +52,12 @@ import utilities.filesystem.Filename;
 
 import interfaces.Launcher;
 
+import manager.ApplicationInformationHolder;
 import manager.ConcreteManager;
 
 public class ConcreteScheduler implements Scheduler {
 	private ConcreteManager concreteManager;
+
 	private ApplicationSpecification applicationSpecification;
 
 	/////////////////////////
@@ -322,8 +326,17 @@ public class ConcreteScheduler implements Scheduler {
 			return true;
 		}
 
-		decider.setAggregatedVariables(null);
+		// Get the current state of aggregators and inform to the decider
+
+		ApplicationInformationHolder applicationInformationHolder = concreteManager.getApplicationInformationHolder(applicationSpecification.getName());
+
+		decider.setAggregatedVariables(applicationInformationHolder.getAggregators());
+
+		// Get the current state of the application specificaton and inform to the decider
+
 		decider.setApplicationSpecification(applicationSpecification);
+
+		// Returns whatever the decider returns
 
 		return decider.hasAnotherIteration();
 	}
@@ -477,7 +490,7 @@ public class ConcreteScheduler implements Scheduler {
 				scheduledNodeGroups.remove(nodeGroup.getSerialNumber());
 			}
 		}	
-		
+
 		throw new InsufficientLaunchersException();
 	}
 

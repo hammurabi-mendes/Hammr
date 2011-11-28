@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import java.util.Set;
+import java.util.HashSet;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -30,7 +31,7 @@ import communication.channel.ChannelElement;
 
 import communication.writers.FileChannelElementWriter;
 
-public abstract class InputGenerator {
+public class InputGenerator {
 	private Filename[] inputs;
 	private Filename[] outputs;
 
@@ -112,7 +113,15 @@ public abstract class InputGenerator {
 		}
 	}
 
-	protected abstract String obtainBuffer(BufferedReader reader) throws IOException;
+	protected String obtainBuffer(BufferedReader reader) throws IOException {
+		return reader.readLine();
+	}
 
-	protected abstract Set<ChannelElement> generateInput(String buffer);
+	protected Set<ChannelElement> generateInput(String buffer) {
+		Set<ChannelElement> result = new HashSet<ChannelElement>();
+
+		result.add(new ChannelElement(buffer, null));
+
+		return result;
+	}
 }
