@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -27,14 +27,23 @@ import utilities.MutableInteger;
 public class NodeGroup implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Set<Node> set;
+	/////////////////////////
+	// RUNNING INFORMATION //
+	/////////////////////////
 
 	private String application;
+
 	private long serialNumber;
 
-	private MutableInteger mark;
+	private Set<Node> set;
+
+	/////////////////////////
+	// PARSING INFORMATION //
+	/////////////////////////
 
 	private NodeGroupBundle nodeGroupBundle;
+
+	private MutableInteger mark;
 
 	public NodeGroup(String application, Node node) {
 		set = new HashSet<Node>();
@@ -48,6 +57,22 @@ public class NodeGroup implements Serializable {
 
 		setApplication(application);
 		addNodes(nodes);
+	}
+
+	public void setApplication(String application) {
+		this.application = application;
+	}
+
+	public String getApplication() {
+		return application;
+	}
+
+	public void setSerialNumber(long serialNumber) {
+		this.serialNumber = serialNumber;
+	}
+
+	public long getSerialNumber() {
+		return serialNumber;
 	}
 
 	private boolean addNode(Node node) {
@@ -94,20 +119,12 @@ public class NodeGroup implements Serializable {
 		return set.size();
 	}
 
-	public void setApplication(String application) {
-		this.application = application;
+	public void setNodeGroupBundle(NodeGroupBundle nodeGroupBundle) {
+		this.nodeGroupBundle = nodeGroupBundle;
 	}
 
-	public String getApplication() {
-		return application;
-	}
-
-	public void setSerialNumber(long serialNumber) {
-		this.serialNumber = serialNumber;
-	}
-
-	public long getSerialNumber() {
-		return serialNumber;
+	public NodeGroupBundle getNodeGroupBundle() {
+		return nodeGroupBundle;
 	}
 
 	public MutableInteger getMark() {
@@ -127,18 +144,12 @@ public class NodeGroup implements Serializable {
 		return (mark != null);
 	}
 
-	public void setNodeGroupBundle(NodeGroupBundle nodeGroupBundle) {
-		this.nodeGroupBundle = nodeGroupBundle;
-	}
-
-	public NodeGroupBundle getNodeGroupBundle() {
-		return nodeGroupBundle;
-	}
-
 	public void prepareSchedule(long serialNumber) {
 		setSerialNumber(serialNumber);
 
 		setNodeGroupBundle(null);
+
+		setMark(null);
 	}
 
 	public String toString() {

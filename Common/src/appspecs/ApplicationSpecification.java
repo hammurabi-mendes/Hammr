@@ -14,6 +14,7 @@ package appspecs;
 import java.util.Iterator;
 
 import java.util.Collections;
+
 import java.util.Set;
 import java.util.HashSet;
 
@@ -25,10 +26,14 @@ import java.util.ArrayList;
 
 import org.jgrapht.graph.*;
 
-import utilities.filesystem.Directory;
 import utilities.filesystem.FileHelper;
+
+import utilities.filesystem.Directory;
 import utilities.filesystem.Filename;
 import utilities.filesystem.Protocol;
+
+import communication.channel.InputChannel;
+import communication.channel.OutputChannel;
 
 import communication.channel.SHMInputChannel;
 import communication.channel.SHMOutputChannel;
@@ -39,7 +44,7 @@ import communication.channel.FileOutputChannel;
 import communication.channel.TCPInputChannel;
 import communication.channel.TCPOutputChannel;
 
-import enums.CommunicationType;
+import enums.CommunicationMode;
 
 import exceptions.OverlapingFilesException;
 
@@ -49,17 +54,23 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	protected String name;
 	protected Directory baseDirectory;
 
-	protected Map<Filename, Set<FileInputChannel>> inputs;
-	protected Map<Filename, FileOutputChannel> outputs;
+	protected Map<Filename, Set<Node>> inputToNodes;
+	protected Map<Filename, Node> outputToNodes;
 
+	protected Map<Filename, Set<InputChannel>> inputToChannels;
+	protected Map<Filename, OutputChannel> outputToChannels;
 
-	protected Set<Node> fileConsumers;
-	protected Set<Node> fileProducers;
+	protected Map<Node, Set<Filename>> nodeToInputs;
+	protected Map<Node, Set<Filename>> nodeToOutputs;
 
 	protected Decider decider;
 
 	protected String nameGenerationString = "node-";
 	protected long nameGenerationCounter = 0L;
+
+	protected long anonymousFileChannelCounter = 0L;
+
+	protected long relinkedFileChannelCounter = 0L;
 
 	public ApplicationSpecification(String name, Directory baseDirectory) {
 		super(Edge.class);
@@ -67,11 +78,14 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		this.name = name;
 		this.baseDirectory = baseDirectory;
 
-		fileConsumers = new HashSet<Node>();
-		fileProducers = new HashSet<Node>();
+		this.inputToNodes = new HashMap<Filename, Set<Node>>();
+		this.outputToNodes = new HashMap<Filename, Node>();
 
-		inputs = new HashMap<Filename, Set<FileInputChannel>>();
-		outputs = new HashMap<Filename, FileOutputChannel>();
+		this.inputToChannels = new HashMap<Filename, Set<InputChannel>>();
+		this.outputToChannels = new HashMap<Filename, OutputChannel>();
+
+		this.nodeToInputs = new HashMap<Node, Set<Filename>>();
+		this.nodeToOutputs = new HashMap<Node, Set<Filename>>();
 	}
 
 	public ApplicationSpecification() {
@@ -115,11 +129,11 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
-	public void insertEdges(Node[] origins, Node[] destinations, CommunicationType communicationType) {
-		insertEdges(origins, destinations, communicationType, -1);
+	public void insertEdges(Node[] origins, Node[] destinations, CommunicationMode communicationMode) {
+		insertEdges(origins, destinations, communicationMode, -1);
 	}
 
-	public void insertEdges(Node[] origins, Node[] destinations, CommunicationType communicationType, Integer quantity) {
+	public void insertEdges(Node[] origins, Node[] destinations, CommunicationMode communicationMode, Integer quantity) {
 		Node currentOrigin = null;
 		Node currentDestination = null;
 
@@ -132,14 +146,14 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 				for(int j = 0; j < destinations.length; j++) {
 					currentDestination = destinations[j];
 
-					addEdge(currentOrigin, currentDestination, new Edge(communicationType));
+					addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
 				}
 			}
 			else {
 				for(int j = 0; j < quantity; j++) {
 					currentDestination = destinations[destinationPosition++ % destinations.length];
 
-					addEdge(currentOrigin, currentDestination, new Edge(communicationType));
+					addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
 				}
 			}
 		}
@@ -158,45 +172,139 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	}
 
 	public void addInput(Node node, Filename filename) {
-		if(inputs.get(filename) == null) {
-			inputs.put(filename, new HashSet<FileInputChannel>());
+		if(inputToChannels.get(filename) == null) {
+			inputToChannels.put(filename, new HashSet<InputChannel>());
+		}
+
+		if(inputToNodes.get(filename) == null) {
+			inputToNodes.put(filename, new HashSet<Node>());
+		}
+
+		if(nodeToInputs.get(node) == null) {
+			nodeToInputs.put(node, new HashSet<Filename>());
 		}
 
 		FileInputChannel inputChannel = new FileInputChannel(filename.getLocation(), filename);
 
-		node.addInputChannel(inputChannel);
+		node.addInputChannel(filename.getLocation(), inputChannel);
 
-		inputs.get(filename).add(inputChannel);
-		fileConsumers.add(node);
+		inputToChannels.get(filename).add(inputChannel);
+		inputToNodes.get(filename).add(node);
+
+		nodeToInputs.get(node).add(filename);
+	}
+
+	public InputChannel delInput(Node node, Filename filename) {
+		InputChannel inputChannel = node.delInputChannel(filename.getLocation());
+
+		if(inputChannel == null) {
+			return null;
+		}
+
+		inputToChannels.get(filename).remove(inputChannel);
+		inputToNodes.get(filename).remove(node);
+
+		nodeToInputs.get(node).remove(filename);
+
+		if(inputToChannels.get(filename).size() == 0) {
+			inputToChannels.remove(filename);
+		}
+
+		if(inputToNodes.get(filename).size() == 0) {
+			inputToNodes.remove(filename);
+		}
+
+		if(nodeToInputs.get(node).size() == 0) {
+			nodeToInputs.remove(node);
+		}
+
+		return inputChannel;
+	}
+
+	public Set<InputChannel> delInput(Filename filename) {
+		Set<InputChannel> result = new HashSet<InputChannel>();
+
+		for(Node node: getFileConsumers()) {
+			if(node.getInputChannel(filename.getLocation()) != null) {
+				InputChannel inputChannel = delInput(node, filename);
+
+				result.add(inputChannel);
+			}
+		}
+
+		return result;
 	}
 
 	public Set<Filename> getInputFilenames() {
-		return inputs.keySet();
+		return inputToNodes.keySet();
 	}
 
 	public Set<Node> getFileConsumers() {
-		return fileConsumers;
+		return nodeToInputs.keySet();
 	}
 
 	public void addOutput(Node node, Filename filename) throws OverlapingFilesException {
-		if(outputs.get(filename) != null) {
+		if(outputToChannels.get(filename) != null) {
 			throw new OverlapingFilesException(filename);
+		}
+
+		if(outputToNodes.get(filename) != null) {
+			throw new OverlapingFilesException(filename);
+		}
+
+		if(nodeToOutputs.get(node) == null) {
+			nodeToOutputs.put(node, new HashSet<Filename>());
 		}
 
 		FileOutputChannel outputChannel = new FileOutputChannel(filename.getLocation(), filename);
 
-		node.addOutputChannel(outputChannel);
+		node.addOutputChannel(filename.getLocation(), outputChannel);
 
-		outputs.put(filename, outputChannel);
-		fileProducers.add(node);
+		outputToChannels.put(filename, outputChannel);
+		outputToNodes.put(filename, node);
+
+		nodeToOutputs.get(node).add(filename);
+	}
+
+	public OutputChannel delOutput(Node node, Filename filename) {
+		OutputChannel outputChannel = node.delOutputChannel(filename.getLocation());
+
+		if(outputChannel == null) {
+			return null;
+		}
+
+		outputToChannels.remove(filename);
+		outputToNodes.remove(filename);
+
+		nodeToOutputs.get(node).remove(filename);
+
+		if(nodeToOutputs.get(node).size() == 0) {
+			nodeToOutputs.remove(node);
+		}
+
+		return outputChannel;
+	}
+
+	public Set<OutputChannel> delOutput(Filename filename) {
+		Set<OutputChannel> result = new HashSet<OutputChannel>();
+
+		for(Node node: getFileProducers()) {
+			if(node.getOutputChannel(filename.getLocation()) != null) {
+				OutputChannel outputChannel = delOutput(node, filename);
+
+				result.add(outputChannel);
+			}
+		}
+
+		return result;
 	}
 
 	public Set<Filename> getOutputFilenames() {
-		return outputs.keySet();
+		return outputToNodes.keySet();
 	}
 
 	public Set<Node> getFileProducers() {
-		return fileProducers;
+		return nodeToOutputs.keySet();
 	}
 
 	public Iterator<Node> nodeIterator() {
@@ -236,8 +344,6 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 			}
 		}
 
-		long anonymousFileChannelCounter = 1000L;
-
 		Node source, target;
 
 		for(Edge edge: edgeSet()) {
@@ -246,42 +352,84 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 			switch(edge.getCommunicationMode()) {
 			case SHM:
-				source.addOutputChannel(new SHMOutputChannel(target.getName()));
-				target.addInputChannel(new SHMInputChannel(source.getName()));
+				source.addOutputChannel(target.getName(), new SHMOutputChannel(target.getName()));
+				target.addInputChannel(source.getName(), new SHMInputChannel(source.getName()));
 				break;
 			case TCP:
-				source.addOutputChannel(new TCPOutputChannel(target.getName()));
-				target.addInputChannel(new TCPInputChannel(source.getName()));
+				source.addOutputChannel(target.getName(), new TCPOutputChannel(target.getName()));
+				target.addInputChannel(source.getName(), new TCPInputChannel(source.getName()));
 				break;
 			case FILE:
-				Filename anonymous = FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + anonymousFileChannelCounter + ".dat", baseDirectory.getProtocol());
+				Filename filename = edge.getFilename(); 
 
-				source.addOutputChannel(new FileOutputChannel(target.getName(), anonymous));
-				target.addInputChannel(new FileInputChannel(source.getName(), anonymous));
+				// If a filename was not set, create an anonymous filename
+				if(filename == null) {
+					FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + (anonymousFileChannelCounter++) + ".dat", baseDirectory.getProtocol());
+				}
 
-				anonymousFileChannelCounter++;
+				source.addOutputChannel(target.getName(), new FileOutputChannel(target.getName(), filename));
+				target.addInputChannel(source.getName(), new FileInputChannel(source.getName(), filename));
 
 				break;
 			}
 		}
-
 	}
 
 	public void relinkOutputsInputs() {
 		List<Filename> inputFilenames = new ArrayList<Filename>(getInputFilenames());
 		List<Filename> outputFilenames = new ArrayList<Filename>(getOutputFilenames());
 
-		List<Node> listFileConsumers = new ArrayList<Node>(fileConsumers);
-
 		Collections.shuffle(inputFilenames);
 		Collections.shuffle(outputFilenames);
 
-		Collections.shuffle(listFileConsumers);
-
 		int minimum = Math.min(inputFilenames.size(), outputFilenames.size());
+
+		// Rename the outputs to the inputs
 
 		for(int i = 0; i < minimum; i++) {
 			FileHelper.move(outputFilenames.get(i), inputFilenames.get(i));
+		}
+
+		// Delete the excess inputs
+
+		// Keep track of nodes who were consumers before the operation
+		// and the nodes who were consumers after the operation
+
+		if(inputFilenames.size() > outputFilenames.size()) {
+			Set<Node> consumersBefore = nodeToInputs.keySet();
+
+			for(int i = minimum; i < inputFilenames.size(); i++) {
+				delInput(inputFilenames.get(i));
+			}
+
+			Set<Node> consumersAfter = nodeToInputs.keySet();
+
+			for(Node consumerBefore: consumersBefore) {
+				// If the node was a consumer before, but the node is not a consumer after,
+				// fake it an input of /dev/null for the next iteration
+
+				if(!consumersAfter.contains(consumerBefore)) {
+					addInput(consumerBefore, FileHelper.getFileInformation(baseDirectory.getPath(), "/dev/null", baseDirectory.getProtocol()));
+				}
+			}
+		}
+
+		// Distribute the excess outputs randomly between the previous consumers
+
+		if(outputFilenames.size() > inputFilenames.size()) {
+			List<Node> consumersBefore = new ArrayList<Node>(getFileConsumers());
+
+			Collections.shuffle(consumersBefore);
+
+			int indexConsumersBefore = 0;
+
+			for(int i = minimum; i < outputFilenames.size(); i++) {
+				Filename filename = FileHelper.getFileInformation(baseDirectory.getPath(), "relinked-filechannel-" + (relinkedFileChannelCounter++) + ".dat", baseDirectory.getProtocol());
+
+				FileHelper.move(outputFilenames.get(i), filename);
+
+				addInput(consumersBefore.get((indexConsumersBefore++) % consumersBefore.size()), filename);
+			}
 		}
 	}
 }

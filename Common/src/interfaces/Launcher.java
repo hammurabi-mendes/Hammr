@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -56,4 +56,23 @@ public interface Launcher extends Remote {
 	 * @return The current running NodeGroups.
 	 */
 	public Collection<NodeGroup> getNodeGroups() throws RemoteException;
+
+	/**
+	 * Get the object from the launcher cache associated with the specified entry.
+	 * 
+	 * @param entry Entry used to index the launcher cache.
+	 * 
+	 * @return The object from the launcher cache associated with the specified entry.
+	 */
+	public Object getCacheEntry(String entry);
+
+	/**
+	 * Insert or replaces an entry into the launcher cache.
+	 * 
+	 * @param entry Entry used to index the launcher cache.
+	 * @param object Object inserted in the launcher cache.
+	 * 
+	 * @return The previous object associated with the specified entry.
+	 */
+	public Object putCacheEntry(String entry, Object object);
 }

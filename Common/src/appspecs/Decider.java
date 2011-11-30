@@ -20,25 +20,27 @@ import execinfo.aggregators.Aggregator;
 public abstract class Decider implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private Map<String, Aggregator<? extends Object>> aggregatedVariables;
+	protected ApplicationSpecification applicationSpecification;
 
-	private ApplicationSpecification applicationSpecification;
+	private boolean requiresRunning;
 
-	public Map<String, Aggregator<? extends Object>> getAggregatedVariables() {
-		return aggregatedVariables;
-	}
+	protected Map<String, Aggregator<? extends Object>> aggregatedVariables;
 
-	public void setAggregatedVariables(Map<String, Aggregator<? extends Object>> map) {
-		this.aggregatedVariables = map;
-	}
-
-	public ApplicationSpecification getApplicationSpecification() {
-		return applicationSpecification;
-	}
-
-	public void setApplicationSpecification(ApplicationSpecification applicationSpecification) {
+	public Decider(ApplicationSpecification applicationSpecification) {
 		this.applicationSpecification = applicationSpecification;
+
+		this.requiresRunning = true;
 	}
 
-	public abstract boolean hasAnotherIteration();
+	public boolean requiresRunning() {
+		return requiresRunning;
+	}
+
+	public void decideFollowingIteration(Map<String, Aggregator<? extends Object>> aggregatedVariables) {
+		this.aggregatedVariables = aggregatedVariables;
+
+		decideFollowingIteration();
+	}
+
+	protected abstract void decideFollowingIteration();
 }

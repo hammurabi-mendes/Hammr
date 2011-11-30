@@ -14,7 +14,7 @@ package mapreduce.appspecs;
 import appspecs.ApplicationSpecification;
 import appspecs.Node;
 
-import enums.CommunicationType;
+import enums.CommunicationMode;
 
 import utilities.filesystem.Directory;
 import utilities.filesystem.Filename;
@@ -43,7 +43,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 		stageMappers(mappers);
 
-		insertEdges(splitStage, mapStage, CommunicationType.FILE);
+		insertEdges(splitStage, mapStage, CommunicationMode.FILE);
 	}
 
 	public void insertMappers(Filename[] inputs, Node[] mappers) throws InexistentInputException {
@@ -61,7 +61,7 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 		addOutput(mergeStage[0], output);
 
-		insertEdges(reduceStage, mergeStage, CommunicationType.FILE);
+		insertEdges(reduceStage, mergeStage, CommunicationMode.FILE);
 	}
 
 	public void insertReducers(Filename[] outputs, Node[] reducers) throws OverlapingFilesException {
@@ -74,10 +74,10 @@ public class MapReduceSpecification extends ApplicationSpecification {
 
 	public void setupCommunication(boolean useTCP) throws OverlapingFilesException {
 		if(useTCP) {
-			insertEdges(mapStage, reduceStage, CommunicationType.TCP);
+			insertEdges(mapStage, reduceStage, CommunicationMode.TCP);
 		}
 		else {
-			insertEdges(mapStage, reduceStage, CommunicationType.FILE);
+			insertEdges(mapStage, reduceStage, CommunicationMode.FILE);
 		}
 
 		finalize();

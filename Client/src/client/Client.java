@@ -18,7 +18,7 @@ import java.util.ArrayList;
 
 import java.rmi.RemoteException;
 
-import enums.CommunicationType;
+import enums.CommunicationMode;
 
 import exceptions.InexistentInputException;
 import exceptions.OverlapingFilesException;
@@ -105,7 +105,7 @@ public class Client {
 		}
 	}
 
-	public void performTest2(CommunicationType communicationType) {
+	public void performTest2(CommunicationMode communicationMode) {
 		Manager manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
 		ApplicationSpecification applicationSpecification = new ApplicationSpecification("test2", baseDirectory);
@@ -147,7 +147,7 @@ public class Client {
 			}
 		}
 
-		applicationSpecification.insertEdges(nodesStage1, nodesStage2, communicationType, -1);
+		applicationSpecification.insertEdges(nodesStage1, nodesStage2, communicationMode, -1);
 
 		try {
 			applicationSpecification.finalize();
@@ -201,7 +201,7 @@ public class Client {
 					source[0] = nodes[i];
 					target[0] = nodes[j];
 
-					applicationSpecification.insertEdges(source, target, CommunicationType.TCP);
+					applicationSpecification.insertEdges(source, target, CommunicationMode.TCP);
 					numberEdges++;
 				}
 			}
@@ -335,7 +335,7 @@ public class Client {
 		if(command.equals("test2")) {
 			Client client = new Client(registryLocation, new Directory(baseDirectory));
 
-			client.performTest2(CommunicationType.TCP);
+			client.performTest2(CommunicationMode.TCP);
 
 			System.exit(0);
 		}

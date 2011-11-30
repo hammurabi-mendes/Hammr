@@ -11,7 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package scheduler;
 
-import appspecs.ApplicationSpecification;
+import java.util.Map;
+
+import execinfo.aggregators.Aggregator;
 
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
@@ -29,12 +31,10 @@ public interface Scheduler {
 	/**
 	 * Setups the scheduler for the new application being executed.
 	 * 
-	 * @param applicationSpecification Application specification.
-	 * 
 	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
 	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
 	 */
-	public void prepareApplicaiton(ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException;
+	public void prepareApplication() throws TemporalDependencyException, CyclicDependencyException;
 
 	/**
 	 * Terminates the application .
@@ -44,9 +44,11 @@ public interface Scheduler {
 	/**
 	 * Tests whether the application has finished.
 	 * 
+	 * @param aggregatedVariables The variables aggregated in the iteration
+	 * 
 	 * @return True if the application has finished, false otherwise.
 	 */
-	public boolean finishedApplication();
+	public boolean finishedApplication(Map<String, Aggregator<? extends Object>> aggregatedVariables);
 
 	/**
 	 * Prepare an iteration for the application.

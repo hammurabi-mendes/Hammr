@@ -39,17 +39,21 @@ import interfaces.Manager;
  * @author Hammurabi Mendes (hmendes)
  */
 public class ConcreteLauncher implements Launcher {
-	private static final int NUMBER_SLOTS_DEFAULT = 100;
+	private static final int NUMBER_SLOTS_DEFAULT = Integer.MAX_VALUE;
 
 	private static ConcreteLauncher instance;
 
-	private String id;
 	private Manager manager;
 
-	private ExecutorService executorService;
-	private Map<Long, NodeGroup> nodeGroups;
+	private String id;
 
 	private LauncherStatus launcherStatus;
+
+	private Map<Long, NodeGroup> nodeGroups;
+
+	private Map<String, Object> launcherCache;
+
+	private ExecutorService executorService;
 
 	static {
 		String registryLocation = System.getProperty("java.rmi.server.location");
@@ -110,15 +114,17 @@ public class ConcreteLauncher implements Launcher {
 	 * @throws UnknownHostException If unable to determine the local hostname.
 	 */
 	private ConcreteLauncher(String registryLocation) throws RemoteException, UnknownHostException {
-		id = "Launcher".concat(RMIHelper.getUniqueID());
-
 		manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		executorService = Executors.newCachedThreadPool();
+		id = "Launcher".concat(RMIHelper.getUniqueID());
+
+		launcherStatus = new LauncherStatus(id, InetAddress.getLocalHost().getHostName(), "default_rack", NUMBER_SLOTS_DEFAULT);
 
 		nodeGroups = Collections.synchronizedMap(new HashMap<Long, NodeGroup>());
 
-		launcherStatus = new LauncherStatus(id, InetAddress.getLocalHost().getHostName(), "default_rack", NUMBER_SLOTS_DEFAULT);
+		launcherCache = Collections.synchronizedMap(new HashMap<String, Object>());
+
+		executorService = Executors.newCachedThreadPool();
 	}
 
 	/**
@@ -126,7 +132,7 @@ public class ConcreteLauncher implements Launcher {
 	 * 
 	 * @return True if the registration was successful; false otherwise.
 	 */
-	public boolean registerLauncher() {
+	private boolean registerLauncher() {
 		try {
 			manager.registerLauncher(this);
 
@@ -139,21 +145,21 @@ public class ConcreteLauncher implements Launcher {
 	}
 
 	/**
-	 * Returns the ID of the launcher.
-	 * 
-	 * @return The ID of the launcher.
-	 */
-	public String getId() {
-		return id;
-	}
-
-	/**
 	 * Returns the manager associated with this launcher.
 	 * 
 	 * @return The manager associated with this launcher.
 	 */
 	public Manager getManager() {
 		return manager;
+	}
+
+	/**
+	 * Returns the ID of the launcher.
+	 * 
+	 * @return The ID of the launcher.
+	 */
+	public String getId() {
+		return id;
 	}
 
 	/**
@@ -223,5 +229,28 @@ public class ConcreteLauncher implements Launcher {
 	 */
 	public static void main(String[] arguments) {
 		System.out.println("Running " + ConcreteLauncher.getInstance().getId());
+	}
+
+	/**
+	 * Get the object from the launcher cache associated with the specified entry.
+	 * 
+	 * @param entry Entry used to index the launcher cache.
+	 * 
+	 * @return The object from the launcher cache associated with the specified entry.
+	 */
+	public Object getCacheEntry(String entry) {
+		return launcherCache.get(entry);
+	}
+
+	/**
+	 * Insert or replaces an entry into the launcher cache.
+	 * 
+	 * @param entry Entry used to index the launcher cache.
+	 * @param object Object inserted in the launcher cache.
+	 * 
+	 * @return The previous object associated with the specified entry.
+	 */
+	public Object putCacheEntry(String entry, Object object) {
+		return launcherCache.put(entry, object);
 	}
 }

@@ -37,6 +37,10 @@ import execinfo.NodeGroup;
 public abstract class Node implements Serializable, Runnable {
 	private static final long serialVersionUID = 1L;
 
+	///////////////////////////////
+	// SPECIFICATION INFORMATION //
+	///////////////////////////////
+
 	protected String name;
 
 	protected Map<String, InputChannel> inputs;
@@ -47,11 +51,17 @@ public abstract class Node implements Serializable, Runnable {
 
 	private Aggregator<? extends Object> aggregator;
 
-	/* Runtime information */
-
-	protected MutableInteger mark;
+	/////////////////////////
+	// RUNNING INFORMATION //
+	/////////////////////////
 
 	protected NodeGroup nodeGroup;
+
+	/////////////////////////
+	// PARSING INFORMATION //
+	/////////////////////////
+
+	protected MutableInteger mark;
 
 	public Node() {
 		this(null);
@@ -80,8 +90,12 @@ public abstract class Node implements Serializable, Runnable {
 		return inputs.values();
 	}
 
-	public void addInputChannel(InputChannel input) {
-		inputs.put(input.getName(), input);
+	public void addInputChannel(String source, InputChannel input) {
+		inputs.put(source, input);
+	}
+
+	public InputChannel delInputChannel(String source) {
+		return inputs.remove(source);
 	}
 
 	public InputChannel getInputChannel(String source) {
@@ -98,8 +112,12 @@ public abstract class Node implements Serializable, Runnable {
 		return outputs.values();
 	}
 
-	public void addOutputChannel(OutputChannel output) {
-		outputs.put(output.getName(), output);
+	public void addOutputChannel(String target, OutputChannel output) {
+		outputs.put(target, output);
+	}
+
+	public OutputChannel delOutputChannel(String target) {
+		return outputs.remove(target);
 	}
 
 	public OutputChannel getOutputChannel(String target) {
@@ -262,9 +280,21 @@ public abstract class Node implements Serializable, Runnable {
 		return aggregator;
 	}
 
-	/* Runtime information (marking / grouping) */
+	/* Running functions */
 
-	/* Mark functions */
+	public void setNodeGroup(NodeGroup nodeGroup) {
+		this.nodeGroup = nodeGroup;
+	}
+
+	public NodeGroup getNodeGroup() {
+		return nodeGroup;
+	}
+
+	public void prepareSchedule() {
+		setMark(null);
+	}
+
+	/* Parsing functions */
 
 	public MutableInteger getMark() {
 		return mark;
@@ -281,16 +311,6 @@ public abstract class Node implements Serializable, Runnable {
 
 	public boolean isMarked() {
 		return (mark != null);
-	}
-
-	/* NodeGroup functions */
-
-	public void setNodeGroup(NodeGroup nodeGroup) {
-		this.nodeGroup = nodeGroup;
-	}
-
-	public NodeGroup getNodeGroup() {
-		return nodeGroup;
 	}
 
 	/* Run & print functions */

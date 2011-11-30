@@ -284,7 +284,7 @@ public class ConcreteManager implements Manager {
 			if(scheduler.finishedIteration()) {
 				scheduler.terminateIteration();
 
-				if(scheduler.finishedApplication()) {
+				if(scheduler.finishedApplication(applicationInformationHolder.getAggregators())) {
 					scheduler.terminateApplication();
 
 					finishApplication(resultSummary.getNodeGroupApplication());
@@ -332,7 +332,7 @@ public class ConcreteManager implements Manager {
 	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException, InexistentInputException {
 		ApplicationInformationHolder applicationInformationHolder = new ApplicationInformationHolder();
 
-		Scheduler applicationScheduler = new ConcreteScheduler(this);
+		Scheduler applicationScheduler = new ConcreteScheduler(applicationName);
 
 		applicationInformationHolder.setApplicationName(applicationName);
 		applicationInformationHolder.setApplicationSpecification(applicationSpecification);
@@ -342,7 +342,7 @@ public class ConcreteManager implements Manager {
 
 		applicationInformationHolder.markStart();
 
-		applicationScheduler.prepareApplicaiton(applicationSpecification);
+		applicationScheduler.prepareApplication();
 		applicationScheduler.prepareIteration();
 
 		return applicationInformationHolder;
