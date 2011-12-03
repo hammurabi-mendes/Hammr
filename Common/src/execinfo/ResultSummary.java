@@ -12,14 +12,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package execinfo;
 
 import java.util.Set;
-import java.util.HashSet;
 
 import java.util.Map;
 import java.util.HashMap;
 
 import java.io.Serializable;
-
-import execinfo.aggregators.Aggregator;
 
 public class ResultSummary implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -32,9 +29,6 @@ public class ResultSummary implements Serializable {
 	// Maps nodes to individual measurements
 	private Map<String, NodeMeasurements> measurements;
 
-	// Aggregators for the nodes
-	private Set<Aggregator<? extends Object>> aggregators;
-
 	private Type type;
 
 	public ResultSummary(String nodeGroupApplication, long nodeGroupSerialNumber, Type type) {
@@ -43,8 +37,6 @@ public class ResultSummary implements Serializable {
 
 		if(type == Type.SUCCESS) {
 			measurements = new HashMap<String, NodeMeasurements>();
-
-			aggregators = new HashSet<Aggregator<? extends Object>>();
 		}
 
 		setType(type);
@@ -92,14 +84,6 @@ public class ResultSummary implements Serializable {
 
 	public void addNodeMeasurements(String nodeName, NodeMeasurements nodeMeasurements) {
 		measurements.put(nodeName, nodeMeasurements);
-	}
-
-	public Set<Aggregator<? extends Object>> getAggregators() {
-		return aggregators;
-	}
-
-	public void addAggregator(Aggregator<? extends Object> aggregator) {
-		aggregators.add(aggregator);
 	}
 
 	public enum Type {

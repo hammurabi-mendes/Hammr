@@ -50,8 +50,6 @@ import execinfo.NodeGroup;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
 
-import execinfo.aggregators.Aggregator;
-
 import interfaces.Manager;
 
 import exceptions.InexistentApplicationException;
@@ -105,6 +103,10 @@ public class ExecutionHandler extends Thread {
 	 * Runs the NodeGroup in separate threads, one thread for each Node.
 	 */
 	public void run() {
+		// Makes the current launcher and current manager accessible to the nodes
+		nodeGroup.setCurrentLauncher(concreteLauncher);
+		nodeGroup.setManager(manager);
+
 		// Stores runtime information; sent back to the master
 		// at the end of the execution.
 		ResultSummary resultSummary;
@@ -295,12 +297,6 @@ public class ExecutionHandler extends Thread {
 
 		for(int i = 0; i < nodeGroup.getSize(); i++) {
 			resultSummary.addNodeMeasurements(nodeHandlers[i].getNode().getName(), nodeHandlers[i].getNodeMeasurements());
-
-			Aggregator<? extends Object> aggregator = nodeHandlers[i].getNode().getAggregator();
-
-			if(aggregator != null) {
-				resultSummary.addAggregator(aggregator);
-			}
 		}
 
 		return resultSummary;

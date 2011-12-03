@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -10,6 +10,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
  */
 
 package communication.shufflers;
+
+import java.util.concurrent.TimeUnit;
 
 import java.util.Map;
 
@@ -37,6 +39,14 @@ public class ChannelElementReaderShuffler {
 
 	public ChannelElement readSomeone() throws EOFException, IOException {
 		return multiplexer.read();
+	}
+
+	public ChannelElement tryReadSomeone() throws IOException {
+		return multiplexer.tryRead();
+	}
+
+	public ChannelElement tryReadSomeone(int timeout, TimeUnit timeUnit) throws IOException {
+		return multiplexer.tryRead(timeout, timeUnit);
 	}
 
 	private class Relayer extends Thread {

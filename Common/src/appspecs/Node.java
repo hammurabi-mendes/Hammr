@@ -11,6 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package appspecs;
 
+import java.util.concurrent.TimeUnit;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.Serializable;
@@ -18,6 +20,8 @@ import java.io.Serializable;
 import java.util.Collection;
 
 import java.util.Set;
+import java.util.HashSet;
+
 import java.util.Map;
 import java.util.HashMap;
 
@@ -25,12 +29,11 @@ import communication.channel.ChannelElement;
 
 import communication.channel.InputChannel;
 import communication.channel.OutputChannel;
+
 import communication.shufflers.ChannelElementReaderShuffler;
 import communication.shufflers.ChannelElementWriterShuffler;
 
 import utilities.MutableInteger;
-
-import execinfo.aggregators.Aggregator;
 
 import execinfo.NodeGroup;
 
@@ -49,7 +52,8 @@ public abstract class Node implements Serializable, Runnable {
 	protected ChannelElementReaderShuffler readersShuffler;
 	protected ChannelElementWriterShuffler writersShuffler;
 
-	private Aggregator<? extends Object> aggregator;
+	protected Set<String> applicationInputs;
+	protected Set<String> applicationOutputs;
 
 	/////////////////////////
 	// RUNNING INFORMATION //
@@ -70,6 +74,9 @@ public abstract class Node implements Serializable, Runnable {
 	public Node(String name) {
 		inputs = new HashMap<String, InputChannel>();
 		outputs = new HashMap<String, OutputChannel>();
+
+		applicationInputs = new HashSet<String>();
+		applicationOutputs = new HashSet<String>();
 	}
 
 	public void setName(String name) {
@@ -90,8 +97,12 @@ public abstract class Node implements Serializable, Runnable {
 		return inputs.values();
 	}
 
-	public void addInputChannel(String source, InputChannel input) {
+	public void addInputChannel(String source, InputChannel input, boolean applicationInput) {
 		inputs.put(source, input);
+
+		if(applicationInput) {
+			applicationInputs.add(input.getName());
+		}
 	}
 
 	public InputChannel delInputChannel(String source) {
@@ -112,8 +123,12 @@ public abstract class Node implements Serializable, Runnable {
 		return outputs.values();
 	}
 
-	public void addOutputChannel(String target, OutputChannel output) {
+	public void addOutputChannel(String target, OutputChannel output, boolean applicationOutput) {
 		outputs.put(target, output);
+
+		if(applicationOutput) {
+			applicationOutputs.add(output.getName());
+		}
 	}
 
 	public OutputChannel delOutputChannel(String target) {
@@ -155,6 +170,38 @@ public abstract class Node implements Serializable, Runnable {
 			return readersShuffler.readSomeone();
 		} catch (EOFException exception) {
 			return null;
+		} catch (IOException exception) {
+			System.err.println("Error reading from arbitrary channel element from node " + this);
+
+			exception.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public ChannelElement tryReadSomeone() {
+		if(readersShuffler == null) {
+			createReaderShuffler();
+		}
+
+		try {
+			return readersShuffler.tryReadSomeone();
+		} catch (IOException exception) {
+			System.err.println("Error reading from arbitrary channel element from node " + this);
+
+			exception.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public ChannelElement tryReadSomeone(int timeout, TimeUnit timeUnit) {
+		if(readersShuffler == null) {
+			createReaderShuffler();
+		}
+
+		try {
+			return readersShuffler.tryReadSomeone(timeout, timeUnit);
 		} catch (IOException exception) {
 			System.err.println("Error reading from arbitrary channel element from node " + this);
 
@@ -268,16 +315,6 @@ public abstract class Node implements Serializable, Runnable {
 		Collection<OutputChannel> outputChannels = getOutputChannels();
 
 		writersShuffler = new ChannelElementWriterShuffler(outputChannels);
-	}
-
-	/* Aggregator functions */
-
-	public void setAggregator(Aggregator<? extends Object> aggregator) {
-		this.aggregator = aggregator;
-	}
-
-	public Aggregator<? extends Object> getAggregator() {
-		return aggregator;
 	}
 
 	/* Running functions */

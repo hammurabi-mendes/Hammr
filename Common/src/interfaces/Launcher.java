@@ -64,7 +64,7 @@ public interface Launcher extends Remote {
 	 * 
 	 * @return The object from the launcher cache associated with the specified entry.
 	 */
-	public Object getCacheEntry(String entry);
+	public Object getCacheEntry(String entry) throws RemoteException;
 
 	/**
 	 * Insert or replaces an entry into the launcher cache.
@@ -74,5 +74,5 @@ public interface Launcher extends Remote {
 	 * 
 	 * @return The previous object associated with the specified entry.
 	 */
-	public Object putCacheEntry(String entry, Object object);
+	public Object putCacheEntry(String entry, Object object) throws RemoteException;
 }

@@ -11,6 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package appspecs;
 
+import java.io.Serializable;
+
 import java.util.Iterator;
 
 import java.util.Collections;
@@ -48,6 +50,8 @@ import enums.CommunicationMode;
 
 import exceptions.OverlapingFilesException;
 
+import interfaces.Aggregator;
+
 public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private static final long serialVersionUID = 1L;
 
@@ -65,7 +69,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	protected Decider decider;
 
+	protected Map<String, Aggregator<? extends Serializable,? extends Serializable>> aggregators;
+
 	protected String nameGenerationString = "node-";
+
 	protected long nameGenerationCounter = 0L;
 
 	protected long anonymousFileChannelCounter = 0L;
@@ -86,6 +93,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		this.nodeToInputs = new HashMap<Node, Set<Filename>>();
 		this.nodeToOutputs = new HashMap<Node, Set<Filename>>();
+
+		this.aggregators = new HashMap<String, Aggregator<? extends Serializable,? extends Serializable>>();
 	}
 
 	public ApplicationSpecification() {
@@ -186,7 +195,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		FileInputChannel inputChannel = new FileInputChannel(filename.getLocation(), filename);
 
-		node.addInputChannel(filename.getLocation(), inputChannel);
+		node.addInputChannel(filename.getLocation(), inputChannel, true);
 
 		inputToChannels.get(filename).add(inputChannel);
 		inputToNodes.get(filename).add(node);
@@ -258,7 +267,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		FileOutputChannel outputChannel = new FileOutputChannel(filename.getLocation(), filename);
 
-		node.addOutputChannel(filename.getLocation(), outputChannel);
+		node.addOutputChannel(filename.getLocation(), outputChannel, true);
 
 		outputToChannels.put(filename, outputChannel);
 		outputToNodes.put(filename, node);
@@ -333,6 +342,18 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return nameGenerationString + (nameGenerationCounter++);
 	}
 
+	public Aggregator<? extends Serializable,? extends Serializable> addAggregator(String variable, Aggregator<? extends Serializable,? extends Serializable> aggregator) {
+		return aggregators.put(variable, aggregator);
+	}
+
+	public Aggregator<? extends Serializable,? extends Serializable> getAggregator(String variable) {
+		return aggregators.get(variable);
+	}
+
+	public Map<String, Aggregator<? extends Serializable,? extends Serializable>> getAggregators() {
+		return aggregators;
+	}
+
 	public void finalize() throws OverlapingFilesException {
 		// Check if input or output filenames overlap
 
@@ -352,12 +373,12 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 			switch(edge.getCommunicationMode()) {
 			case SHM:
-				source.addOutputChannel(target.getName(), new SHMOutputChannel(target.getName()));
-				target.addInputChannel(source.getName(), new SHMInputChannel(source.getName()));
+				source.addOutputChannel(target.getName(), new SHMOutputChannel(target.getName()), false);
+				target.addInputChannel(source.getName(), new SHMInputChannel(source.getName()), false);
 				break;
 			case TCP:
-				source.addOutputChannel(target.getName(), new TCPOutputChannel(target.getName()));
-				target.addInputChannel(source.getName(), new TCPInputChannel(source.getName()));
+				source.addOutputChannel(target.getName(), new TCPOutputChannel(target.getName()), false);
+				target.addInputChannel(source.getName(), new TCPInputChannel(source.getName()), false);
 				break;
 			case FILE:
 				Filename filename = edge.getFilename(); 
@@ -367,8 +388,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 					FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + (anonymousFileChannelCounter++) + ".dat", baseDirectory.getProtocol());
 				}
 
-				source.addOutputChannel(target.getName(), new FileOutputChannel(target.getName(), filename));
-				target.addInputChannel(source.getName(), new FileInputChannel(source.getName(), filename));
+				source.addOutputChannel(target.getName(), new FileOutputChannel(target.getName(), filename), false);
+				target.addInputChannel(source.getName(), new FileInputChannel(source.getName(), filename), false);
 
 				break;
 			}

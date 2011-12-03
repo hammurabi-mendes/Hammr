@@ -167,7 +167,7 @@ public class ConcreteLauncher implements Launcher {
 	 * 
 	 * @return The status of the Launcher.
 	 */
-	public LauncherStatus getStatus() throws RemoteException {
+	public LauncherStatus getStatus() {
 		return launcherStatus;
 	}
 

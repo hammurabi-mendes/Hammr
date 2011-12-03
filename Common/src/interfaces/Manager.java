@@ -7,12 +7,14 @@ Redistribution and use in source and binary forms, with or without modification,
 Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package interfaces;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+
+import java.io.Serializable;
 
 import java.net.InetSocketAddress;
 
@@ -60,7 +62,7 @@ public interface Manager extends Remote {
 	 * @return True unless the map for the specific pair application/node already exists.
 	 */
 	public boolean insertSocketAddress(String application, String name, InetSocketAddress socketAddress) throws RemoteException;
-	
+
 	/**
 	 * Queries for the socket address for a server-side TCP channel. This is called in the setup of NodeGroups that have
 	 * client-side TCP channels. This happens in the Launcher. The corresponding server-side TCP channels inform their socket
@@ -72,6 +74,16 @@ public interface Manager extends Remote {
 	 * @return The socket address associated with the requested TCP channel.
 	 */
 	public InetSocketAddress obtainSocketAddress(String application, String name) throws RemoteException;
+
+	/**
+	 * Returns the aggregator specified by the application name and variable name.
+	 * 
+	 * @param application The application name.
+	 * @param variable The variable name;
+	 * 
+	 * @return The aggregator associated to the specified variable in the specified application. 
+	 */
+	public Aggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) throws RemoteException;
 
 	/**
 	 * Notifies the master that a NodeGroup finished execution. This is called by the Launchers.

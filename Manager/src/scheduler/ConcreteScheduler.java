@@ -11,6 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package scheduler;
 
+import java.io.Serializable;
+
 import java.rmi.RemoteException;
 
 import java.util.Collections;
@@ -33,8 +35,6 @@ import enums.CommunicationMode;
 import execinfo.NodeGroup;
 import execinfo.NodeGroupBundle;
 
-import execinfo.aggregators.Aggregator;
-
 import exceptions.InexistentInputException;
 import exceptions.InexistentOutputException;
 
@@ -48,9 +48,12 @@ import appspecs.Node;
 import appspecs.Edge;
 
 import utilities.MutableInteger;
+import utilities.RMIHelper;
 
 import utilities.filesystem.FileHelper;
 import utilities.filesystem.Filename;
+
+import interfaces.Aggregator;
 
 import interfaces.Launcher;
 
@@ -74,8 +77,6 @@ public class ConcreteScheduler implements Scheduler {
 
 	// List of NodeGroups prepared, running, and terminated
 
-	private Map<Long, Launcher> schedulingDecisions;
-
 	private Map<Long, NodeGroup> runningNodeGroups;
 
 	private long serialNumberCounter = 1L;
@@ -94,6 +95,7 @@ public class ConcreteScheduler implements Scheduler {
 	 * 
 	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
 	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
+	 *                                   A cyclic is only a problem when it involves files (TCP/SHM cycles are allowed).
 	 */
 	public synchronized void prepareApplication() throws TemporalDependencyException, CyclicDependencyException {
 		// Initiate data structures
@@ -103,8 +105,6 @@ public class ConcreteScheduler implements Scheduler {
 		this.dependencyManager = new DependencyManager<NodeGroup, NodeGroupBundle>();
 
 		this.runningNodeGroups = new HashMap<Long, NodeGroup>();
-
-		this.schedulingDecisions = new HashMap<Long, Launcher>();
 
 		// Parse the application graph
 
@@ -160,6 +160,14 @@ public class ConcreteScheduler implements Scheduler {
 					throw new TemporalDependencyException(source, target);
 				}
 			}
+		}
+
+		// Exports all the aggregators
+
+		for(String variable: applicationSpecification.getAggregators().keySet()) {
+			Aggregator<? extends Serializable,? extends Serializable> aggregator = applicationSpecification.getAggregator(variable);
+
+			RMIHelper.exportRemoteObject(aggregator);
 		}
 	}
 
@@ -322,8 +330,10 @@ public class ConcreteScheduler implements Scheduler {
 	 * 
 	 * @return True if the application has finished, false otherwise.
 	 */
-	public synchronized boolean finishedApplication(Map<String, Aggregator<? extends Object>> aggregatedVariables) {
+	public synchronized boolean finishedApplication() {
 		Decider decider = applicationSpecification.getDecider();
+
+		Map<String, Aggregator<? extends Serializable,? extends Serializable>> aggregators = applicationSpecification.getAggregators();
 
 		if(decider == null) {
 			return true;
@@ -332,7 +342,7 @@ public class ConcreteScheduler implements Scheduler {
 		// Run the graph transformation in the decider, and possibly
 		// make new processes available to execute.
 
-		decider.decideFollowingIteration(aggregatedVariables);
+		decider.decideFollowingIteration(aggregators);
 
 		// Returns true if the decider prepared a following iteration
 
@@ -474,11 +484,11 @@ public class ConcreteScheduler implements Scheduler {
 	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
 		// First, try to reschedule the node group to the same launcher used before
 
-		Launcher launcherPrevious;
+		Launcher previousLauncher = nodeGroup.getPreviousLauncher();
 
-		if((launcherPrevious = schedulingDecisions.get(nodeGroup.getSerialNumber())) != null) {
+		if(previousLauncher != null) {
 			try {
-				if(launcherPrevious.addNodeGroup(nodeGroup)) {
+				if(previousLauncher.addNodeGroup(nodeGroup)) {
 					// Add node group to the running group
 					runningNodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);
 
@@ -499,7 +509,7 @@ public class ConcreteScheduler implements Scheduler {
 
 				if(launcher.addNodeGroup(nodeGroup)) {
 					// Remember this scheduling decision
-					schedulingDecisions.put(nodeGroup.getSerialNumber(), launcher);
+					nodeGroup.setPreviousLauncher(launcher);
 
 					// Add node group to the running group
 					runningNodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);

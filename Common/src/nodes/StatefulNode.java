@@ -9,38 +9,76 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package appspecs;
+package nodes;
 
-import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 
-import java.util.Map;
+import appspecs.Node;
 
-import interfaces.Aggregator;
+import communication.channel.ChannelElement;
 
-public abstract class Decider implements Serializable {
+public abstract class StatefulNode extends Node {
 	private static final long serialVersionUID = 1L;
 
-	protected ApplicationSpecification applicationSpecification;
+	private int timeout;
 
-	private boolean requiresRunning;
+	private TimeUnit timeUnit;
 
-	protected Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables;
+	public StatefulNode() {
+		this.timeout = -1;
 
-	public Decider(ApplicationSpecification applicationSpecification) {
-		this.applicationSpecification = applicationSpecification;
-
-		this.requiresRunning = true;
+		this.timeUnit = null;
 	}
 
-	public boolean requiresRunning() {
-		return requiresRunning;
+	public StatefulNode(int timeout, TimeUnit timeUnit) {
+		this.timeout = timeout;
+
+		this.timeUnit = timeUnit;
 	}
 
-	public void decideFollowingIteration(Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables) {
-		this.aggregatedVariables = aggregatedVariables;
+	public void run() {
+		if(!performInitialization()) {
+			return;
+		}
 
-		decideFollowingIteration();
+		ChannelElement channelElement;
+
+		while(true) {
+			if(timeout == -1) {
+				channelElement = readSomeone();
+			}
+			else {
+				channelElement = tryReadSomeone(timeout, timeUnit);
+			}
+
+			if(channelElement == null) {
+				if(timeout == -1) {
+					break;
+				}
+				else if(checkDynamicTermination()) {
+					break;
+				}
+			}
+
+			performAction(channelElement);
+		}
+
+		closeOutputs();
+
+		performTermination();
 	}
 
-	protected abstract void decideFollowingIteration();
+	protected boolean checkDynamicTermination() {
+		return true;
+	}
+
+	protected boolean performInitialization() {
+		return true;
+	}
+
+	protected abstract void performAction(ChannelElement channelElement);
+
+	protected boolean performTermination() {
+		return true;
+	}
 }

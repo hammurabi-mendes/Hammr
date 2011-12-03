@@ -11,6 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package execinfo;
 
+import interfaces.Manager;
+import interfaces.Launcher;
+
 import java.util.Collection;
 
 import java.io.Serializable;
@@ -36,6 +39,11 @@ public class NodeGroup implements Serializable {
 	private long serialNumber;
 
 	private Set<Node> set;
+
+	private Launcher currentLauncher;
+	private Launcher previousLauncher;
+
+	private Manager manager;
 
 	/////////////////////////
 	// PARSING INFORMATION //
@@ -117,6 +125,30 @@ public class NodeGroup implements Serializable {
 
 	public int getSize() {
 		return set.size();
+	}
+
+	public Launcher getCurrentLauncher() {
+		return currentLauncher;
+	}
+
+	public void setCurrentLauncher(Launcher currentLauncher) {
+		this.currentLauncher = currentLauncher;
+	}
+
+	public Launcher getPreviousLauncher() {
+		return previousLauncher;
+	}
+
+	public void setPreviousLauncher(Launcher previousLauncher) {
+		this.previousLauncher = previousLauncher;
+	}
+
+	public Manager getManager() {
+		return manager;
+	}
+
+	public void setManager(Manager manager) {
+		this.manager = manager;
 	}
 
 	public void setNodeGroupBundle(NodeGroupBundle nodeGroupBundle) {

@@ -9,39 +9,21 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package execinfo.aggregators;
+package graphs.communication;
 
-import java.io.Serializable;
+import graphs.programs.GraphVertex;
 
-public abstract class Aggregator<T> implements Serializable {
+import communication.channel.ChannelElement;
+
+public class VertexChannelElement<V extends GraphVertex> extends ChannelElement {
 	private static final long serialVersionUID = 1L;
 
-	protected String variable;
-
-	protected T aggregate;
-
-	public Aggregator(String variable) {
-		this.variable = variable;
-
-		this.aggregate = initializeAggregate();
+	public VertexChannelElement(V vertex) {
+		super(vertex, null);
 	}
 
-	public String getVariable() {
-		return variable;
+	@SuppressWarnings("unchecked")
+	public V getObject() {
+		return (V) super.getObject();
 	}
-
-	public T getAggregate() {
-		return aggregate;
-	}
-
-	public void mergeAggregators(Aggregator<? extends Object> currentAggregator) {
-		if(this.getClass() == currentAggregator.getClass()) {
-			Aggregator<T> casted = (Aggregator<T>) currentAggregator;
-
-			updateAggregate(casted.getAggregate());
-		}
-	}
-
-	public abstract T initializeAggregate();
-	public abstract void updateAggregate(T object);
 }

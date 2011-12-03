@@ -11,7 +11,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package utilities;
 
-public class Pair<X,Y> {
+import java.io.Serializable;
+
+public class Pair<X,Y> implements Serializable {
+	private static final long serialVersionUID = 1L;
+
 	private final X first;
 	private final Y second;
 

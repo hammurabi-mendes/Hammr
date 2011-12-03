@@ -9,38 +9,43 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package appspecs;
+package graphs.programs;
 
-import java.io.Serializable;
+import org.jgrapht.graph.DefaultEdge;
 
-import java.util.Map;
-
-import interfaces.Aggregator;
-
-public abstract class Decider implements Serializable {
+public class GraphEdge extends DefaultEdge {
 	private static final long serialVersionUID = 1L;
 
-	protected ApplicationSpecification applicationSpecification;
+	private String name;
 
-	private boolean requiresRunning;
+	private String sourceName;
+	private String targetName;
 
-	protected Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables;
-
-	public Decider(ApplicationSpecification applicationSpecification) {
-		this.applicationSpecification = applicationSpecification;
-
-		this.requiresRunning = true;
+	public String getName() {
+		return name;
 	}
 
-	public boolean requiresRunning() {
-		return requiresRunning;
+	public void setName(String name) {
+		this.name = name;
 	}
 
-	public void decideFollowingIteration(Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables) {
-		this.aggregatedVariables = aggregatedVariables;
-
-		decideFollowingIteration();
+	public String getSourceName() {
+		return sourceName;
 	}
 
-	protected abstract void decideFollowingIteration();
+	public void setSourceName(String sourceName) {
+		this.sourceName = sourceName;
+	}
+
+	public String getTargetName() {
+		return targetName;
+	}
+
+	public void setTargetName(String targetName) {
+		this.targetName = targetName;
+	}
+
+	public String toString() {
+		return "[" + name + ": " + sourceName + " -> " + targetName + "]";
+	}
 }

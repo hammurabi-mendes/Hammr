@@ -63,8 +63,20 @@ public class SHMChannelElementMultiplexer implements ChannelElementReader {
 		}
 	}
 
-	public ChannelElement tryRead() throws EOFException, IOException {
+	public ChannelElement tryRead() throws IOException {
 		return queue.poll();
+	}
+
+	public ChannelElement tryRead(int timeout, TimeUnit timeUnit) throws IOException {
+		while(true) {
+			try {
+				return queue.poll(timeout, timeUnit);
+			} catch (InterruptedException exception) {
+				System.err.println("Unexpected thread interruption while waiting for a read");
+
+				exception.printStackTrace();
+			}
+		}
 	}
 
 	public boolean write(String origin, ChannelElement channelElement) throws IOException {

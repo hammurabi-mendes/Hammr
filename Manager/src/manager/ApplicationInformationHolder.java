@@ -25,8 +25,6 @@ import scheduler.Scheduler;
 
 import execinfo.ResultSummary;
 
-import execinfo.aggregators.Aggregator;
-
 /**
  * Packs information regarding an executing application in the manager. The information contained is
  * the application name, specification, scheduler, the current registered server-side TCP channels and
@@ -45,8 +43,6 @@ public class ApplicationInformationHolder {
 
 	private Set<ResultSummary> receivedResultSummaries;
 
-	private Map<String, Aggregator<? extends Object>> aggregators;
-
 	private long globalTimerStart = -1L;
 	private long globalTimerFinish = -1L;
 
@@ -57,8 +53,6 @@ public class ApplicationInformationHolder {
 		this.registeredSocketAddresses = new HashMap<String, InetSocketAddress>();
 
 		this.receivedResultSummaries = new HashSet<ResultSummary>();
-
-		this.aggregators = new HashMap<String, Aggregator<? extends Object>>();
 	}
 
 	/**
@@ -137,24 +131,12 @@ public class ApplicationInformationHolder {
 	}
 
 	/**
-	 * Inserts a received NodeGroup runtime information into the holder, and updates the aggregators
-	 * corresponding to the application.
+	 * Inserts a received NodeGroup runtime information into the holder.
 	 * 
 	 * @param resultSummary The received runtime information.
 	 */
 	public void addReceivedResultSummaries(ResultSummary resultSummary) {
 		this.receivedResultSummaries.add(resultSummary);
-
-		for(Aggregator<? extends Object> currentAggregator: resultSummary.getAggregators()) {
-			Aggregator<? extends Object> previousAggregator = aggregators.get(currentAggregator.getVariable());
-
-			if(previousAggregator == null) {
-				aggregators.put(currentAggregator.getVariable(), currentAggregator);
-			}
-			else {
-				previousAggregator.mergeAggregators(currentAggregator);
-			}
-		}
 	}
 
 	/**
@@ -187,25 +169,5 @@ public class ApplicationInformationHolder {
 	 */
 	public long getTotalRunningTime() {
 		return globalTimerFinish - globalTimerStart;
-	}
-
-	/**
-	 * Returns the aggregator associated with the indicated variable.
-	 * 
-	 * @param variable The variable that indexes the aggregator.
-	 * 
-	 * @return The aggregator associated with the indicated variable.
-	 */
-	public Aggregator<? extends Object> getAggregator(String variable) {
-		return aggregators.get(variable);
-	}
-
-	/**
-	 * Returns the mapping for all aggregators for this application.
-	 * 
-	 * @return The mapping for all the aggregators for this application.
-	 */
-	public Map<String, Aggregator<? extends Object>> getAggregators() {
-		return aggregators;
 	}
 }

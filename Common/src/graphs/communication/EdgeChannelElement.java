@@ -9,38 +9,21 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package appspecs;
+package graphs.communication;
 
-import java.io.Serializable;
+import graphs.programs.GraphEdge;
 
-import java.util.Map;
+import communication.channel.ChannelElement;
 
-import interfaces.Aggregator;
-
-public abstract class Decider implements Serializable {
+public class EdgeChannelElement<E extends GraphEdge> extends ChannelElement {
 	private static final long serialVersionUID = 1L;
 
-	protected ApplicationSpecification applicationSpecification;
-
-	private boolean requiresRunning;
-
-	protected Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables;
-
-	public Decider(ApplicationSpecification applicationSpecification) {
-		this.applicationSpecification = applicationSpecification;
-
-		this.requiresRunning = true;
+	public EdgeChannelElement(E edge) {
+		super(edge, null);
 	}
 
-	public boolean requiresRunning() {
-		return requiresRunning;
+	@SuppressWarnings("unchecked")
+	public E getObject() {
+		return (E) super.getObject();
 	}
-
-	public void decideFollowingIteration(Map<String, Aggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables) {
-		this.aggregatedVariables = aggregatedVariables;
-
-		decideFollowingIteration();
-	}
-
-	protected abstract void decideFollowingIteration();
 }

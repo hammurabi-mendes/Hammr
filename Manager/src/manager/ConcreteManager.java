@@ -11,6 +11,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package manager;
 
+import interfaces.Aggregator;
 import interfaces.Launcher;
 import interfaces.Manager;
 
@@ -24,6 +25,8 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+
+import java.io.Serializable;
 
 import java.net.InetSocketAddress;
 
@@ -199,7 +202,7 @@ public class ConcreteManager implements Manager {
 	 * 
 	 * @return True unless the map for the specific pair application/node already exists.
 	 */
-	public boolean insertSocketAddress(String application, String name, InetSocketAddress socketAddress) throws RemoteException {
+	public boolean insertSocketAddress(String application, String name, InetSocketAddress socketAddress) {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
 		if(applicationInformationHolder == null) {
@@ -223,7 +226,7 @@ public class ConcreteManager implements Manager {
 	 * 
 	 * @return The socket address associated with the requested TCP channel.
 	 */
-	public InetSocketAddress obtainSocketAddress(String application, String name) throws RemoteException {
+	public InetSocketAddress obtainSocketAddress(String application, String name) {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
 		if(applicationInformationHolder == null) {
@@ -241,6 +244,26 @@ public class ConcreteManager implements Manager {
 		}
 
 		return applicationInformationHolder.getRegisteredSocketAddress(name);
+	}
+
+	/**
+	 * Returns the aggregator specified by the application name and variable name.
+	 * 
+	 * @param application The application name.
+	 * @param variable The variable name;
+	 * 
+	 * @return The aggregator associated to the specified variable in the specified application. 
+	 */
+	public Aggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) {
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
+
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for application " + application + "!");
+
+			return null;
+		}
+
+		return applicationInformationHolder.getApplicationSpecification().getAggregator(variable);
 	}
 
 	/**
@@ -284,7 +307,7 @@ public class ConcreteManager implements Manager {
 			if(scheduler.finishedIteration()) {
 				scheduler.terminateIteration();
 
-				if(scheduler.finishedApplication(applicationInformationHolder.getAggregators())) {
+				if(scheduler.finishedApplication()) {
 					scheduler.terminateApplication();
 
 					finishApplication(resultSummary.getNodeGroupApplication());

@@ -11,10 +11,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package scheduler;
 
-import java.util.Map;
-
-import execinfo.aggregators.Aggregator;
-
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
@@ -44,11 +40,9 @@ public interface Scheduler {
 	/**
 	 * Tests whether the application has finished.
 	 * 
-	 * @param aggregatedVariables The variables aggregated in the iteration
-	 * 
 	 * @return True if the application has finished, false otherwise.
 	 */
-	public boolean finishedApplication(Map<String, Aggregator<? extends Object>> aggregatedVariables);
+	public boolean finishedApplication();
 
 	/**
 	 * Prepare an iteration for the application.

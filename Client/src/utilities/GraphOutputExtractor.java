@@ -11,78 +11,59 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package utilities;
 
+import graphs.programs.GraphVertex;
+import graphs.programs.GraphEdge;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.util.Map;
 
 import java.io.EOFException;
 import java.io.IOException;
 
-import utilities.filesystem.Filename;
-import utilities.filesystem.Directory;
-
-import utilities.filesystem.FileHelper;
+import org.jgrapht.graph.AbstractBaseGraph;
 
 import communication.channel.ChannelElement;
 
+import graphs.communication.EdgeChannelElement;
+import graphs.communication.VertexChannelElement;
+
 import communication.readers.FileChannelElementReader;
 
-public class OutputExtractor {
+import utilities.filesystem.FileHelper;
+
+import utilities.filesystem.Filename;
+import utilities.filesystem.Directory;
+
+public abstract class GraphOutputExtractor<V extends GraphVertex,E extends GraphEdge> {
+	protected AbstractBaseGraph<V,E> graph;
+
+	protected Map<String,V> vertexMap;
+
 	private Filename[] inputs;
-	private Filename[] outputs;
 
-	public OutputExtractor(Directory directory, String[] inputsOutputs) {
+	public GraphOutputExtractor(Directory directory, String[] inputs) {
 		List<Filename> inputList = new ArrayList<Filename>();
-		List<Filename> outputList = new ArrayList<Filename>();
 
-		boolean foundColum = false;
-
-		for(int i = 0; i < inputsOutputs.length; i++) {
-			if(inputsOutputs[i].equals(":")) {
-				foundColum = true;
-
-				continue;
-			}
-
-			if(!foundColum) {
-				inputList.add(FileHelper.getFileInformation(directory.getPath(), inputsOutputs[i], directory.getProtocol()));
-			}
-			else {
-				outputList.add(FileHelper.getFileInformation(directory.getPath(), inputsOutputs[i], directory.getProtocol()));
-			}
-		}	
-
-		if(inputList.size() == 0 || outputList.size() == 0) {
-			System.err.println("Parameters: <input> ... <input> : <output> ... <output>");
-
-			System.exit(1);
+		for(int i = 0; i < inputs.length; i++) {
+			inputList.add(FileHelper.getFileInformation(directory.getPath(), inputs[i], directory.getProtocol()));
 		}
 
 		this.inputs = inputList.toArray(new Filename[inputList.size()]);
-		this.outputs = outputList.toArray(new Filename[outputList.size()]);
+
+		this.vertexMap = new HashMap<String,V>();
 	}
 
-	public OutputExtractor(Filename[] inputs, Filename[] outputs) {
-		this.inputs = inputs;
-		this.outputs = outputs;
-	}
-
+	@SuppressWarnings("unchecked")
 	public void run() throws IOException {
 		FileChannelElementReader[] readers = new FileChannelElementReader[inputs.length];
+
+		// First pass: add vertexes
 
 		for(int i = 0; i < inputs.length; i++) {
 			readers[i] = new FileChannelElementReader(inputs[i]);
 		}
-
-		BufferedWriter[] writers = new BufferedWriter[outputs.length];
-
-		for(int i = 0; i < outputs.length; i++) {
-			writers[i] = new BufferedWriter(new FileWriter(outputs[i].getLocation(), true));
-		}
-
-		int writerCount = 0;
 
 		for(int i = 0; i < readers.length; i++) {
 			ChannelElement channelElement;
@@ -94,7 +75,9 @@ public class OutputExtractor {
 					break;
 				}
 
-				writers[(writerCount++) % writers.length].write(obtainInformation(channelElement));
+				if(channelElement instanceof VertexChannelElement) {
+					addVertex(((VertexChannelElement<V>) channelElement).getObject());
+				}
 			}
 		}
 
@@ -102,12 +85,45 @@ public class OutputExtractor {
 			readers[i].close();
 		}
 
-		for(int i = 0; i < writers.length; i++) {
-			writers[i].close();
+		// Second pass: add edges
+
+		for(int i = 0; i < inputs.length; i++) {
+			readers[i] = new FileChannelElementReader(inputs[i]);
 		}
+
+		for(int i = 0; i < readers.length; i++) {
+			ChannelElement channelElement;
+
+			while(true) {
+				try {
+					channelElement = readers[i].read();
+				} catch(EOFException exception) {
+					break;
+				}
+
+				if(channelElement instanceof EdgeChannelElement) {
+					addEdge(((EdgeChannelElement<E>) channelElement).getObject());
+				}
+			}
+		}
+
+		for(int i = 0; i < readers.length; i++) {
+			readers[i].close();
+		}
+
 	}
 
-	protected String obtainInformation(ChannelElement channelElement) {
-		return channelElement.toString();
+	protected abstract void createGraph();
+
+	protected abstract void printGraph();
+
+	protected void addVertex(V vertex) {
+		graph.addVertex(vertex);
+
+		vertexMap.put(vertex.getName(), vertex);
+	}
+
+	protected void addEdge(E edge) {
+		graph.addEdge(vertexMap.get(edge.getSourceName()), vertexMap.get(edge.getTargetName()), edge);
 	}
 }

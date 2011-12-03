@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Hammurabi Mendes
+Copyright (c) 2011, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -11,26 +11,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package nodes;
 
-import appspecs.Node;
-
 import communication.channel.ChannelElement;
 
-public class ReaderSomeoneWriterSomeone extends Node {
+public class ReaderSomeoneWriterSomeone extends StatefulNode {
 	private static final long serialVersionUID = 1L;
 
-	public void run() {
-		ChannelElement channelElement;
-
-		while(true) {
-			channelElement = readSomeone();
-
-			if(channelElement == null) {
-				break;
-			}
-
-			writeSomeone(channelElement);
-		}
-
-		closeOutputs();
+	protected void performAction(ChannelElement channelElement) {
+		writeSomeone(channelElement);
 	}
 }
