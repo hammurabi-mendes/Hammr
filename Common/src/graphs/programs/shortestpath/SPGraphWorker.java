@@ -12,6 +12,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 package graphs.programs.shortestpath;
 
 import java.rmi.RemoteException;
+import java.util.concurrent.TimeUnit;
 
 import graphs.programs.GraphWorker;
 
@@ -30,7 +31,7 @@ public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 	private Aggregator<Pair<Boolean,Integer>,Boolean> aggregator;
 
 	public SPGraphWorker(int numberWorker, int numberVertexes, int numberWorkers) {
-		super(numberWorker);
+		super(numberWorker, 30, TimeUnit.SECONDS);
 
 		this.numberVertexes = numberVertexes;
 		this.numberWorkers = numberWorkers;
