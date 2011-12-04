@@ -79,6 +79,10 @@ public class SHMChannelElementMultiplexer implements ChannelElementReader {
 		}
 	}
 
+	public ChannelElement peek() {
+		return queue.peek();
+	}
+
 	public boolean write(String origin, ChannelElement channelElement) throws IOException {
 		try {
 			queue.put(channelElement);

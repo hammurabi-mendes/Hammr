@@ -14,6 +14,8 @@ package graphs.programs.shortestpath;
 import java.rmi.RemoteException;
 import java.util.concurrent.TimeUnit;
 
+import org.jgrapht.graph.DefaultDirectedGraph;
+
 import graphs.programs.GraphWorker;
 
 import interfaces.Aggregator;
@@ -25,21 +27,23 @@ import communication.channel.ChannelElement;
 public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 	private static final long serialVersionUID = 1L;
 
-	private int numberVertexes;
-	private int numberWorkers;
-
 	private Aggregator<Pair<Boolean,Integer>,Boolean> aggregator;
 
-	public SPGraphWorker(int numberWorker, int numberVertexes, int numberWorkers) {
-		super(numberWorker, 30, TimeUnit.SECONDS);
+	private boolean finish;
 
-		this.numberVertexes = numberVertexes;
-		this.numberWorkers = numberWorkers;
+	public SPGraphWorker(int numberWorker, int numberVertexes, int numberWorkers) {
+		super(numberWorker, numberVertexes, numberWorkers, 30, TimeUnit.SECONDS);
+
+		this.finish = false;
+	}
+
+	protected DefaultDirectedGraph<SPGraphVertex,SPGraphEdge> createGraph() {
+		return new DefaultDirectedGraph<SPGraphVertex,SPGraphEdge>(SPGraphEdge.class);
 	}
 
 	@SuppressWarnings("unchecked")
 	protected boolean performInitialization() {
-		super.createGraph(SPGraphEdge.class);
+		loadGraph();
 
 		try {
 			this.aggregator = (Aggregator<Pair<Boolean, Integer>, Boolean>) nodeGroup.getManager().obtainAggregator("shortestpath", "finish");
@@ -50,17 +54,21 @@ public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 		SPGraphVertex vertex = vertexMap.get("0");
 
 		if(vertex != null) {
-			updateVertex(vertex, 0);
+			updateVertex(vertex, 0);		
 		}
 
 		return true;
 	}
 
 	protected void performAction(ChannelElement channelElement) {
-		try {
-			aggregator.updateAggregate(new Pair<Boolean,Integer>(false, numberWorker));
-		} catch (RemoteException exception) {
-			System.err.println("Error obtaining information from the aggregator: " + exception);
+		if(finish == true) {
+			try {
+				finish = false;
+
+				aggregator.updateAggregate(new Pair<Boolean,Integer>(false, numberWorker));
+			} catch (RemoteException exception) {
+				System.err.println("Error obtaining information from the aggregator: " + exception);
+			}
 		}
 
 		if(channelElement instanceof SPGraphUpdateMessage) {
@@ -71,12 +79,6 @@ public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 			double distance = message.getDistance();
 
 			updateVertex(vertex, distance);
-		}
-
-		try {
-			aggregator.updateAggregate(new Pair<Boolean,Integer>(true, numberWorker));
-		} catch (RemoteException exception) {
-			System.err.println("Error obtaining information from the aggregator: " + exception);
 		}
 	}
 
@@ -96,18 +98,38 @@ public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 		}
 
 		// Send messages to foreign neighbors
-		for(SPGraphEdge foreignEdge: foreignEdges.get(vertex.getName())) {
-			String ownerWorker = obtainOwnerWorker(foreignEdge.getTargetName());
+		if(foreignEdges.containsKey(vertex.getName())) {
+			for(SPGraphEdge foreignEdge: foreignEdges.get(vertex.getName())) {
+				String ownerWorker = obtainOwnerWorker(foreignEdge.getTargetName());
 
-			SPGraphUpdateMessage updateMessage = new SPGraphUpdateMessage(foreignEdge.getTargetName(), vertex.getDistance() + foreignEdge.getDistance());
+				SPGraphUpdateMessage updateMessage = new SPGraphUpdateMessage(foreignEdge.getTargetName(), vertex.getDistance() + foreignEdge.getDistance());
 
-			write(updateMessage, ownerWorker);
+				write(updateMessage, ownerWorker);
+			}
 		}
 	}
 
-	protected boolean checkDynamicTermination() {
+	protected boolean performTermination() {
+		dumpGraph();
+
+		return true;
+	}
+
+	protected boolean dynamicallyVerifyTermination() {
+		if(finish == false) {
+			try {
+				finish = true;
+
+				aggregator.updateAggregate(new Pair<Boolean,Integer>(true, numberWorker));
+			} catch (RemoteException exception) {
+				System.err.println("Error updating the aggregator: " + exception);
+			}	
+		}
+
 		try {
-			return aggregator.obtainAggregate();
+			boolean result = aggregator.obtainAggregate();
+
+			return result;
 		} catch (RemoteException exception) {
 			System.err.println("Error obtaining information from the aggregator: " + exception);
 		}
@@ -115,7 +137,7 @@ public class SPGraphWorker extends GraphWorker<SPGraphVertex,SPGraphEdge> {
 		return true;
 	}
 
-	protected String obtainOwnerWorker(String vertexName) {
-		return "worker-" + (Integer.valueOf(vertexName) / (numberVertexes / numberWorkers));
+	protected void initiateReaderShufflers() {
+		createReaderShuffler(true, false);
 	}
 }

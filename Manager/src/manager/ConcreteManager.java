@@ -165,6 +165,7 @@ public class ConcreteManager implements Manager {
 			if(!scheduler.schedule()) {
 				System.err.println("Initial schedule indicated that no free node group bundles are present");
 
+				finishApplication(applicationName);
 				return false;
 			}
 		} catch (TemporalDependencyException exception) {
@@ -186,6 +187,7 @@ public class ConcreteManager implements Manager {
 			System.err.println("Initial schedule indicated that some files are missing: " + exception.toString());
 
 			finishApplication(applicationName);
+			return false;
 		}
 
 		return true;

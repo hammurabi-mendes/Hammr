@@ -13,6 +13,8 @@ package graphs.appspecs;
 
 import appspecs.ApplicationSpecification;
 
+import appspecs.Node;
+
 import utilities.filesystem.Directory;
 
 import graphs.programs.GraphVertex;
@@ -26,5 +28,11 @@ public class GraphProcessingSpecification<V extends GraphVertex,E extends GraphE
 
 		nameGenerationString = "worker-";
 		nameGenerationCounter = 0L;
+	}
+
+	public void insertWorkers(Node[] workers) {
+		insertNodes(workers);
+
+		setInitials(workers);
 	}
 }

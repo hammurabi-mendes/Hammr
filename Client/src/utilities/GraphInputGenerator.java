@@ -19,7 +19,7 @@ import java.util.ArrayList;
 
 import java.io.IOException;
 
-import org.jgrapht.graph.AbstractBaseGraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
 
 import org.jgrapht.traverse.BreadthFirstIterator;
 
@@ -34,13 +34,11 @@ import utilities.filesystem.Filename;
 import utilities.filesystem.Directory;
 
 public abstract class GraphInputGenerator<V extends GraphVertex,E extends GraphEdge> {
-	protected AbstractBaseGraph<V,E> graph;
+	protected DefaultDirectedGraph<V,E> graph;
 
 	protected Filename[] outputs;
 
 	public GraphInputGenerator(Directory directory, String[] outputs) {
-		obtainGraph();
-
 		List<Filename> outputList = new ArrayList<Filename>();
 
 		for(int i = 0; i < outputs.length; i++) {
@@ -53,6 +51,8 @@ public abstract class GraphInputGenerator<V extends GraphVertex,E extends GraphE
 	protected abstract void obtainGraph();
 
 	public void run() throws IOException {
+		obtainGraph();
+
 		// First, give name to all vertices and edges of the graph
 
 		BreadthFirstIterator<V,E> iterator1 = new BreadthFirstIterator<V,E>(graph);
@@ -67,13 +67,15 @@ public abstract class GraphInputGenerator<V extends GraphVertex,E extends GraphE
 
 		for(E edge: graph.edgeSet()) {
 			V source = graph.getEdgeSource(edge);
-			V target = graph.getEdgeSource(edge);
+			V target = graph.getEdgeTarget(edge);
 
 			edge.setName(source.getName() + "," + target.getName());
 
 			edge.setSourceName(source.getName());
 			edge.setTargetName(target.getName());
 		}
+
+		// Now, write the vertices and edges to the input files
 
 		FileChannelElementWriter[] writers = new FileChannelElementWriter[outputs.length];
 

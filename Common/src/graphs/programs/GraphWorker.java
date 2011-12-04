@@ -22,35 +22,42 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 
-import org.jgrapht.graph.DefaultDirectedWeightedGraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.traverse.BreadthFirstIterator;
 
 import communication.channel.ChannelElement;
 
 import graphs.communication.EdgeChannelElement;
 import graphs.communication.VertexChannelElement;
 
-import nodes.StatefulNode;
+import nodes.TimedStatefulNode;
 
-public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> extends StatefulNode {
+public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> extends TimedStatefulNode {
 	private static final long serialVersionUID = 1L;
 
-	protected DefaultDirectedWeightedGraph<V,E> graph;
+	protected DefaultDirectedGraph<V,E> graph;
 
 	protected int numberWorker;
+
+	private int numberVertexes;
+	private int numberWorkers;
 
 	protected Map<String,V> vertexMap;
 	protected Map<String,E> edgeMap;
 
 	protected Map<String,Set<E>> foreignEdges;
 
-	public GraphWorker(int numberWorker) {
-		this(numberWorker, -1, null);
+	public GraphWorker(int numberWorker, int numberVertexes, int numberWorkers) {
+		this(numberWorker, numberVertexes, numberWorkers, -1, null);
 	}
 
-	public GraphWorker(int numberWorker, int timeout, TimeUnit timeUnit) {
+	public GraphWorker(int numberWorker, int numberVertexes, int numberWorkers, int timeout, TimeUnit timeUnit) {
 		super(timeout, timeUnit);
 
 		this.numberWorker = numberWorker;
+
+		this.numberVertexes = numberVertexes;
+		this.numberWorkers = numberWorkers;
 
 		this.vertexMap = new HashMap<String,V>();
 		this.edgeMap = new HashMap<String,E>();
@@ -58,11 +65,17 @@ public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> ext
 		this.foreignEdges = new HashMap<String,Set<E>>();
 	}
 
-	@SuppressWarnings("unchecked")
-	protected void createGraph(Class<? extends E> classGraphEdge) {
-		graph = new DefaultDirectedWeightedGraph<V,E>(classGraphEdge);
+	protected abstract DefaultDirectedGraph<V,E> createGraph();
 
-		for(String applicationInput: applicationInputs) {
+	@SuppressWarnings("unchecked")
+	protected void loadGraph() {
+		// Only wait for closing outputs of the structural nodes
+
+		createReaderShuffler(true, false);
+
+		graph = createGraph();
+
+		for(String applicationInput: getApplicationInputChannelNames()) {
 			ChannelElement channelElement;
 
 			List<V> vertexes = new ArrayList<V>();
@@ -111,7 +124,7 @@ public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> ext
 					foreignEdges.get(sourceName).add(edge);
 				}
 				else {
-					graph.addEdge(sourceVertex, targetVertex);
+					graph.addEdge(sourceVertex, targetVertex, edge);
 				}
 
 				edgeMap.put(edge.getName(), edge);
@@ -119,5 +132,23 @@ public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> ext
 		}
 	}
 
-	protected abstract String obtainOwnerWorker(String vertexName);
+	protected void dumpGraph() {
+		for(String applicationOutput: getApplicationOutputChannelNames()) {
+			BreadthFirstIterator<V,E> iterator = new BreadthFirstIterator<V,E>(graph);
+
+			while(iterator.hasNext()) {
+				V vertex = iterator.next();
+
+				write(new VertexChannelElement<V>(vertex), applicationOutput);
+
+				for(E edge: graph.outgoingEdgesOf(vertex)) {
+					write(new EdgeChannelElement<E>(edge), applicationOutput);
+				}
+			}
+		}
+	}
+
+	protected String obtainOwnerWorker(String vertexName) {
+		return "worker-" + (Integer.valueOf(vertexName) / (numberVertexes / numberWorkers));
+	}
 }

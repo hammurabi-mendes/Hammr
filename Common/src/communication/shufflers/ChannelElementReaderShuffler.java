@@ -48,6 +48,10 @@ public class ChannelElementReaderShuffler {
 	public ChannelElement tryReadSomeone(int timeout, TimeUnit timeUnit) throws IOException {
 		return multiplexer.tryRead(timeout, timeUnit);
 	}
+	
+	public ChannelElement peek() {
+		return multiplexer.peek();
+	}
 
 	private class Relayer extends Thread {
 		private String origin;

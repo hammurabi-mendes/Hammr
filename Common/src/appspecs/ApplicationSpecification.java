@@ -67,6 +67,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	protected Map<Node, Set<Filename>> nodeToInputs;
 	protected Map<Node, Set<Filename>> nodeToOutputs;
 
+	protected Set<Node> initials;
+
 	protected Decider decider;
 
 	protected Map<String, Aggregator<? extends Serializable,? extends Serializable>> aggregators;
@@ -93,6 +95,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		this.nodeToInputs = new HashMap<Node, Set<Filename>>();
 		this.nodeToOutputs = new HashMap<Node, Set<Filename>>();
+
+		this.initials = new HashSet<Node>();
 
 		this.aggregators = new HashMap<String, Aggregator<? extends Serializable,? extends Serializable>>();
 	}
@@ -132,6 +136,16 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		}
 	}
 
+	public void setInitials(Node[] nodes) {
+		for(Node node: nodes) {
+			initials.add(node);
+		}
+	}
+
+	public Set<Node> getInitials() {
+		return initials;
+	}
+
 	public void insertEdges(Edge[] edges) {
 		for(Edge edge: edges) {
 			addEdge(edge.getSource(), edge.getTarget());
@@ -155,14 +169,18 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 				for(int j = 0; j < destinations.length; j++) {
 					currentDestination = destinations[j];
 
-					addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
+					if(currentDestination != currentOrigin) {
+						addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
+					}
 				}
 			}
 			else {
 				for(int j = 0; j < quantity; j++) {
 					currentDestination = destinations[destinationPosition++ % destinations.length];
 
-					addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
+					if(currentDestination != currentOrigin) {
+						addEdge(currentOrigin, currentDestination, new Edge(communicationMode));
+					}
 				}
 			}
 		}
@@ -385,7 +403,7 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 				// If a filename was not set, create an anonymous filename
 				if(filename == null) {
-					FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + (anonymousFileChannelCounter++) + ".dat", baseDirectory.getProtocol());
+					filename = FileHelper.getFileInformation(baseDirectory.getPath(), "anonymous-filechannel-" + (anonymousFileChannelCounter++) + ".dat", baseDirectory.getProtocol());
 				}
 
 				source.addOutputChannel(target.getName(), new FileOutputChannel(target.getName(), filename), false);

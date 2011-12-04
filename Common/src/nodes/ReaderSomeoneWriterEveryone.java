@@ -16,7 +16,15 @@ import communication.channel.ChannelElement;
 public class ReaderSomeoneWriterEveryone extends StatefulNode {
 	private static final long serialVersionUID = 1L;
 
+	protected boolean performInitialization() {
+		return true;
+	}
+
 	protected void performAction(ChannelElement channelElement) {
 		writeEveryone(channelElement);
+	}
+
+	protected boolean performTermination() {
+		return true;
 	}
 }

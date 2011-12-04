@@ -11,30 +11,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package nodes;
 
-import java.util.concurrent.TimeUnit;
-
 import appspecs.Node;
 
 import communication.channel.ChannelElement;
 
 public abstract class StatefulNode extends Node {
 	private static final long serialVersionUID = 1L;
-
-	private int timeout;
-
-	private TimeUnit timeUnit;
-
-	public StatefulNode() {
-		this.timeout = -1;
-
-		this.timeUnit = null;
-	}
-
-	public StatefulNode(int timeout, TimeUnit timeUnit) {
-		this.timeout = timeout;
-
-		this.timeUnit = timeUnit;
-	}
 
 	public void run() {
 		if(!performInitialization()) {
@@ -44,41 +26,23 @@ public abstract class StatefulNode extends Node {
 		ChannelElement channelElement;
 
 		while(true) {
-			if(timeout == -1) {
-				channelElement = readSomeone();
-			}
-			else {
-				channelElement = tryReadSomeone(timeout, timeUnit);
-			}
+			channelElement = readSomeone();
 
 			if(channelElement == null) {
-				if(timeout == -1) {
-					break;
-				}
-				else if(checkDynamicTermination()) {
-					break;
-				}
+				break;
 			}
 
 			performAction(channelElement);
 		}
 
-		closeOutputs();
-
 		performTermination();
+
+		closeOutputs();		
 	}
 
-	protected boolean checkDynamicTermination() {
-		return true;
-	}
-
-	protected boolean performInitialization() {
-		return true;
-	}
+	protected abstract boolean performInitialization();
 
 	protected abstract void performAction(ChannelElement channelElement);
 
-	protected boolean performTermination() {
-		return true;
-	}
+	protected abstract boolean performTermination();
 }

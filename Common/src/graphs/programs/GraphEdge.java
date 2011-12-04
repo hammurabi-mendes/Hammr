@@ -11,9 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package graphs.programs;
 
-import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DefaultWeightedEdge;
 
-public class GraphEdge extends DefaultEdge {
+public class GraphEdge extends DefaultWeightedEdge {
 	private static final long serialVersionUID = 1L;
 
 	private String name;

@@ -22,7 +22,7 @@ import java.util.Map;
 import java.io.EOFException;
 import java.io.IOException;
 
-import org.jgrapht.graph.AbstractBaseGraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
 
 import communication.channel.ChannelElement;
 
@@ -37,7 +37,7 @@ import utilities.filesystem.Filename;
 import utilities.filesystem.Directory;
 
 public abstract class GraphOutputExtractor<V extends GraphVertex,E extends GraphEdge> {
-	protected AbstractBaseGraph<V,E> graph;
+	protected DefaultDirectedGraph<V,E> graph;
 
 	protected Map<String,V> vertexMap;
 

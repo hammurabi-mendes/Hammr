@@ -369,17 +369,23 @@ public class ConcreteScheduler implements Scheduler {
 			throw new InexistentInputException(missingInputs);
 		}
 
-		// Find out the initial nodes: the nodes that only have input file dependencies
+		// Find out the initial nodes:
+		// - If the application specification defines the intials, use them
+		// - Otherwise get file consumers that only depend on system files
 
 		Node source, target;
 
-		Set<Node> initials = new HashSet<Node>(applicationSpecification.getFileConsumers());
+		Set<Node> initials = applicationSpecification.getInitials();
 
-		for(Edge edge: applicationSpecification.edgeSet()) {
-			target = edge.getTarget();
+		if(initials.size() == 0) {
+			initials = new HashSet<Node>(applicationSpecification.getFileConsumers());
 
-			if(initials.contains(target)) {
-				initials.remove(target);
+			for(Edge edge: applicationSpecification.edgeSet()) {
+				target = edge.getTarget();
+
+				if(initials.contains(target)) {
+					initials.remove(target);
+				}
 			}
 		}
 

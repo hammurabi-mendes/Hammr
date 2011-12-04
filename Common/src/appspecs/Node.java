@@ -20,9 +20,8 @@ import java.io.Serializable;
 import java.util.Collection;
 
 import java.util.Set;
-import java.util.HashSet;
-
 import java.util.Map;
+
 import java.util.HashMap;
 
 import communication.channel.ChannelElement;
@@ -49,11 +48,15 @@ public abstract class Node implements Serializable, Runnable {
 	protected Map<String, InputChannel> inputs;
 	protected Map<String, OutputChannel> outputs;
 
+	protected Map<String, InputChannel> structuralInputs;
+	protected Map<String, OutputChannel> structuralOutputs;
+
+
+	protected Map<String, InputChannel> applicationInputs;
+	protected Map<String, OutputChannel> applicationOutputs;
+
 	protected ChannelElementReaderShuffler readersShuffler;
 	protected ChannelElementWriterShuffler writersShuffler;
-
-	protected Set<String> applicationInputs;
-	protected Set<String> applicationOutputs;
 
 	/////////////////////////
 	// RUNNING INFORMATION //
@@ -75,8 +78,11 @@ public abstract class Node implements Serializable, Runnable {
 		inputs = new HashMap<String, InputChannel>();
 		outputs = new HashMap<String, OutputChannel>();
 
-		applicationInputs = new HashSet<String>();
-		applicationOutputs = new HashSet<String>();
+		applicationInputs = new HashMap<String, InputChannel>();
+		applicationOutputs = new HashMap<String, OutputChannel>();
+
+		structuralInputs = new HashMap<String, InputChannel>();
+		structuralOutputs = new HashMap<String, OutputChannel>();
 	}
 
 	public void setName(String name) {
@@ -93,15 +99,34 @@ public abstract class Node implements Serializable, Runnable {
 		return inputs.keySet();
 	}
 
+	public Set<String> getApplicationInputChannelNames() {
+		return applicationInputs.keySet();
+	}
+
+	public Set<String> getStrucutralInputChannelNames() {
+		return applicationInputs.keySet();
+	}
+
 	public Collection<InputChannel> getInputChannels() {
 		return inputs.values();
+	}
+
+	public Collection<InputChannel> getApplicationInputChannels() {
+		return applicationInputs.values();
+	}
+
+	public Collection<InputChannel> getStructuralInputChannels() {
+		return structuralInputs.values();
 	}
 
 	public void addInputChannel(String source, InputChannel input, boolean applicationInput) {
 		inputs.put(source, input);
 
 		if(applicationInput) {
-			applicationInputs.add(input.getName());
+			applicationInputs.put(source, input);
+		}
+		else {
+			structuralInputs.put(source, input);
 		}
 	}
 
@@ -119,15 +144,34 @@ public abstract class Node implements Serializable, Runnable {
 		return outputs.keySet();
 	}
 
+	public Set<String> getApplicationOutputChannelNames() {
+		return applicationOutputs.keySet();
+	}
+
+	public Set<String> getStructuralOutputChannelNames() {
+		return structuralOutputs.keySet();
+	}
+
 	public Collection<OutputChannel> getOutputChannels() {
 		return outputs.values();
+	}
+
+	public Collection<OutputChannel> getApplicationOutputChannels() {
+		return applicationOutputs.values();
+	}
+
+	public Collection<OutputChannel> getStructuralOutputChannels() {
+		return structuralOutputs.values();
 	}
 
 	public void addOutputChannel(String target, OutputChannel output, boolean applicationOutput) {
 		outputs.put(target, output);
 
 		if(applicationOutput) {
-			applicationOutputs.add(output.getName());
+			applicationOutputs.put(target, output);
+		}
+		else {
+			structuralOutputs.put(target, output);
 		}
 	}
 
@@ -141,7 +185,7 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Read Functions */
 
-	public ChannelElement read(String name) {
+	protected ChannelElement read(String name) {
 		InputChannel inputChannel = getInputChannel(name);
 
 		if(inputChannel != null) {
@@ -161,7 +205,7 @@ public abstract class Node implements Serializable, Runnable {
 		return null;
 	}
 
-	public ChannelElement readSomeone() {
+	protected ChannelElement readSomeone() {
 		if(readersShuffler == null) {
 			createReaderShuffler();
 		}
@@ -179,9 +223,11 @@ public abstract class Node implements Serializable, Runnable {
 		return null;
 	}
 
-	public ChannelElement tryReadSomeone() {
+	protected ChannelElement tryReadSomeone() {
+		// You need to create the read shuffler manually if you want to use this method
+
 		if(readersShuffler == null) {
-			createReaderShuffler();
+			throw new IllegalStateException();
 		}
 
 		try {
@@ -195,9 +241,11 @@ public abstract class Node implements Serializable, Runnable {
 		return null;
 	}
 
-	public ChannelElement tryReadSomeone(int timeout, TimeUnit timeUnit) {
+	protected ChannelElement tryReadSomeone(int timeout, TimeUnit timeUnit) {
+		// You need to create the read shuffler manually if you want to use this method
+
 		if(readersShuffler == null) {
-			createReaderShuffler();
+			throw new IllegalStateException();
 		}
 
 		try {
@@ -213,7 +261,7 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Write Functions */
 
-	public boolean write(ChannelElement channelElement, String name) {
+	protected boolean write(ChannelElement channelElement, String name) {
 		OutputChannel outputChannel = getOutputChannel(name);
 
 		if(outputChannel != null) {
@@ -234,7 +282,7 @@ public abstract class Node implements Serializable, Runnable {
 		return false;
 	}
 
-	public boolean writeSomeone(ChannelElement channelElement) {
+	protected boolean writeSomeone(ChannelElement channelElement) {
 		if(writersShuffler == null) {
 			createWriterShuffler();
 		}
@@ -250,7 +298,7 @@ public abstract class Node implements Serializable, Runnable {
 		return false;
 	}
 
-	public boolean writeEveryone(ChannelElement channelElement) {
+	protected boolean writeEveryone(ChannelElement channelElement) {
 		Set<String> outputChannelNames = getOutputChannelNames();
 
 		boolean finalResult = true;
@@ -270,13 +318,13 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* Close functions */
 
-	public boolean closeOutputs() {
+	protected boolean closeOutputs() {
 		Collection<OutputChannel> outputChannels = getOutputChannels();
 
-		return closeChannelHandlers(outputChannels);
+		return closeOutputs(outputChannels);
 	}
 
-	public boolean closeChannelHandlers(Collection<OutputChannel> outputChannels) {
+	protected boolean closeOutputs(Collection<OutputChannel> outputChannels) {
 		boolean finalResult = true;
 
 		for(OutputChannel outputChannel: outputChannels) {
@@ -301,7 +349,7 @@ public abstract class Node implements Serializable, Runnable {
 
 	/* ReaderShuffler and WriterShuffler functions */
 
-	private void createReaderShuffler() {
+	protected void createReaderShuffler() {
 		try {
 			readersShuffler = new ChannelElementReaderShuffler(inputs);
 		} catch (IOException exception) {
@@ -311,7 +359,31 @@ public abstract class Node implements Serializable, Runnable {
 		}
 	}
 
-	private void createWriterShuffler() {
+	protected void createReaderShuffler(boolean structural, boolean application) {
+		Map<String, InputChannel> selected = null;
+
+		if(structural && application) {
+			selected = inputs;
+		}
+
+		if(structural && !application) {
+			selected = structuralInputs;
+		}
+
+		if(!structural && application) {
+			selected = applicationInputs;
+		}
+
+		try {
+			readersShuffler = new ChannelElementReaderShuffler(selected);
+		} catch (IOException exception) {
+			System.err.println("Error creating read shuffler for node " + this);
+
+			exception.printStackTrace();
+		}
+	}
+
+	protected void createWriterShuffler() {
 		Collection<OutputChannel> outputChannels = getOutputChannels();
 
 		writersShuffler = new ChannelElementWriterShuffler(outputChannels);

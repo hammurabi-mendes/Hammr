@@ -66,17 +66,25 @@ public class ShortestPathClient {
 			workers[i] = new SPGraphWorker(i, numberVertexes, numberWorkers);
 		}
 
-		graphProcessingSpecification.insertNodes(workers);
+		graphProcessingSpecification.insertWorkers(workers);
+
+		// Add the inputs and outputs
 
 		Filename inputFilename;
 		Filename outputFilename;
 
-		for(int i = 0; i < workers.length; i++) {
-			inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i], baseDirectory.getProtocol());
-			outputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i] + ".out", baseDirectory.getProtocol());
+		try {
+			for(int i = 0; i < workers.length; i++) {
+				inputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i], baseDirectory.getProtocol());
+				outputFilename = FileHelper.getFileInformation(baseDirectory.getPath(), inputs[i] + ".out", baseDirectory.getProtocol());
 
-			graphProcessingSpecification.addInput(workers[i], inputFilename);
-			graphProcessingSpecification.addInput(workers[i], outputFilename);
+				graphProcessingSpecification.addInput(workers[i], inputFilename);
+				graphProcessingSpecification.addOutput(workers[i], outputFilename);
+			}
+		} catch (OverlapingFilesException exception) {
+			System.err.println(exception);
+
+			System.exit(1);
 		}
 
 		// Add pairwise TCP communication among the workers
@@ -91,7 +99,7 @@ public class ShortestPathClient {
 			System.exit(1);
 		}
 
-		// Add an aggregator
+		// Add an aggregator to permit workers detect the end of the iterative processes
 
 		graphProcessingSpecification.addAggregator("finish", new SPFinishAggregator("finish", numberWorkers));
 
@@ -109,7 +117,7 @@ public class ShortestPathClient {
 
 		String baseDirectory = System.getProperty("hammr.client.basedir"); 
 
-		if(arguments.length <= 2) {
+		if(arguments.length <= 1) {
 			System.err.println("Usage: Client <number_vertexes> [<input_filename> ... <input_filename>]");
 
 			System.exit(1);

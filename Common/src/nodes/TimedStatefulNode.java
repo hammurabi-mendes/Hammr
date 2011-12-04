@@ -11,20 +11,51 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package nodes;
 
+import java.util.concurrent.TimeUnit;
+
 import communication.channel.ChannelElement;
 
-public class ReaderSomeoneWriterSomeone extends StatefulNode {
+public abstract class TimedStatefulNode extends StatefulNode {
 	private static final long serialVersionUID = 1L;
 
-	protected boolean performInitialization() {
-		return true;
+	private int timeout;
+
+	private TimeUnit timeUnit;
+
+	public TimedStatefulNode(int timeout, TimeUnit timeUnit) {
+		this.timeout = timeout;
+
+		this.timeUnit = timeUnit;
 	}
 
-	protected void performAction(ChannelElement channelElement) {
-		writeSomeone(channelElement);
+	public void run() {
+		initiateReaderShufflers();
+
+		if(!performInitialization()) {
+			return;
+		}
+
+		ChannelElement channelElement;
+
+		while(true) {
+			channelElement = tryReadSomeone(timeout, timeUnit);
+
+			if(channelElement == null) {
+				if(dynamicallyVerifyTermination()) {
+					break;
+				}
+			}
+			else {
+				performAction(channelElement);
+			}
+		}
+
+		performTermination();
+
+		closeOutputs();		
 	}
 
-	protected boolean performTermination() {
-		return true;
-	}
+	protected abstract void initiateReaderShufflers();
+
+	protected abstract boolean dynamicallyVerifyTermination();
 }

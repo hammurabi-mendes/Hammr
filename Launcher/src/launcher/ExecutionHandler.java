@@ -120,6 +120,10 @@ public class ExecutionHandler extends Thread {
 
 			resultSummary = new ResultSummary(nodeGroup.getApplication(), nodeGroup.getSerialNumber(), ResultSummary.Type.FAILURE);
 
+			for(Node node: nodeGroup.getNodes()) {
+				resultSummary.addNodeMeasurements(node.getName(), null);
+			}
+
 			finishExecution(resultSummary);
 
 			return;
