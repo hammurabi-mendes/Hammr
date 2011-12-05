@@ -1,9 +1,16 @@
 #!/bin/sh
 
-BASEDIR=`pwd`
-RUNNINGDIR=$(pwd)
+# Edit these definitions
+
+MANAGER_DIR=$(pwd)/Experiments
+CLIENT_DIR=$(pwd)/Experiments/WordCount
 
 REGISTRYLOC=localhost
+
+# You probably do not need to edit these definitions
+
+BASEDIR=`pwd`
+RUNNINGDIR=pwd
 
 COMMONDIR="$BASEDIR/Common/bin/"
 LIBDIR="$BASEDIR/lib/"
@@ -51,17 +58,27 @@ RunManager() {
 
 	echo "Running manager: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
 	echo "You should have alredy run \"rmiregistry\" on machine ${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.manager.basedir=$BASEDIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.manager.basedir=$MANAGER_DIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Manager/security.policy manager.ConcreteManager $@
 }
 
 RunLauncher() {
 	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $@
 }
 
-RunClient() {
+RunTest() {
 	echo "Running client: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.client.basedir=$RUNNINGDIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.Client $@ &
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.client.basedir=$CLIENT_DIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.TestClient $@
+}
+
+RunWordCount() {
+	echo "Running wordcount: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.client.basedir=$CLIENT_DIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.MapReduceClient $@
+}
+
+RunShortestPath() {
+	echo "Running shortestpath: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
+	java -cp $CLASSPATH $HEAPPARAMS -Dhammr.client.basedir=$CLIENT_DIR -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Client/security.policy client.ShortestPathClient $@
 }
 
 RunGenInput() {
@@ -88,7 +105,9 @@ case "${COMMAND}" in
     clean)        Clean $@ ;;
     manager)      RunManager $@ ;;
     launcher)     RunLauncher $@ ;;
-    client)       RunClient $@ ;;
+    test)         RunTest $@ ;;
+    wordcount)    RunWordCount $@ ;;
+    shortestpath) RunShortestPath $@ ;;
 		gen_input)    RunGenInput $@ ;;
 		gen_output)   RunGenOutput $@ ;;
     kill)         Kill $@ ;;
