@@ -1,0 +1,62 @@
+=====================
+Manager
+=====================
+
+Program arguments:
+
+VM arguments:
+
+-Dhammr.manager.basedir=/home/hmendes/Hammr/Experiments/ -Djava.rmi.server.location=localhost -Djava.rmi.server.codebase=file://${workspace_loc:Common}/bin/ -Djava.security.policy=${workspace_loc:Manager}/security.policy
+
+=====================
+Launcher
+=====================
+
+Program arguments:
+
+VM arguments:
+
+-Djava.rmi.server.location=localhost -Djava.rmi.server.codebase=file://${workspace_loc:Common}/bin/ -Djava.security.policy=${workspace_loc:Launcher}/security.policy
+
+=====================
+CountingInputGenerator
+=====================
+
+Program arguments:
+
+/home/hmendes/Hammr/Experiments/WordCount/ one-republic.txt : input-stage1-0.dat input-stage1-1.dat input-stage1-2.dat input-stage1-3.dat input-stage1-4.dat input-stage1-5.dat input-stage1-6.dat input-stage1-7.dat input-stage1-8.dat input-stage1-9.dat
+
+VM arguments:
+
+=====================
+CountingOutputExtractor
+=====================
+
+Program arguments:
+
+/home/hmendes/Hammr/Experiments/WordCount/ input-stage1-0.dat.out input-stage1-1.dat.out input-stage1-2.dat.out input-stage1-3.dat.out input-stage1-4.dat.out input-stage1-5.dat.out input-stage1-6.dat.out input-stage1-7.dat.out input-stage1-8.dat.out input-stage1-9.dat.out : count-republic.txt
+
+VM arguments:
+
+=====================
+MapReduceClient
+=====================
+
+Program arguments:
+
+false false false input-stage1-0.dat input-stage1-1.dat input-stage1-2.dat input-stage1-3.dat input-stage1-4.dat input-stage1-5.dat input-stage1-6.dat input-stage1-7.dat input-stage1-8.dat input-stage1-9.dat
+
+VM arguments:
+
+-Dhammr.client.basedir=/home/hmendes/Hammr/Experiments/WordCount/ -Djava.rmi.server.location=localhost -Djava.rmi.server.codebase=file://${workspace_loc:Common}/bin/ -Djava.security.policy=${workspace_loc:Client}/security.policy
+
+=====================
+SPGraphInputGenerator
+=====================
+
+Program arguments:
+
+/home/hmendes/Hammr/Experiments/ShortestPath/ 100 0.05 10 input0.dat input1.dat input2.dat input3.dat input4.dat input5.dat input6.dat input7.dat input8.dat input9.dat
+
+VM arguments:
+

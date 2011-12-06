@@ -37,7 +37,7 @@ public abstract class StatefulNode extends Node {
 
 		performTermination();
 
-		closeOutputs();		
+		shutdown();		
 	}
 
 	protected abstract boolean performInitialization();

@@ -34,7 +34,7 @@ public abstract class Reducer<O,V> extends Node {
 
 		finalizeReduce();
 
-		closeOutputs();
+		shutdown();
 	}
 
 	protected abstract void reduce(O object, V value);

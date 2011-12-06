@@ -225,13 +225,6 @@ public class ConcreteLauncher implements Launcher {
 	}
 
 	/**
-	 * Launcher startup method.
-	 */
-	public static void main(String[] arguments) {
-		System.out.println("Running " + ConcreteLauncher.getInstance().getId());
-	}
-
-	/**
 	 * Get the object from the launcher cache associated with the specified entry.
 	 * 
 	 * @param entry Entry used to index the launcher cache.
@@ -253,4 +246,11 @@ public class ConcreteLauncher implements Launcher {
 	public Object putCacheEntry(String entry, Object object) {
 		return launcherCache.put(entry, object);
 	}
+
+	/**
+	 * Launcher startup method.
+	 */
+	public static void main(String[] arguments) {
+		System.out.println("Running " + ConcreteLauncher.getInstance().getId());
+	}	
 }

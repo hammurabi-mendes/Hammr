@@ -65,7 +65,7 @@ public abstract class Merger<O,V> extends Node {
 			}
 		}
 
-		closeOutputs();
+		shutdown();
 	}
 
 	public abstract Comparator<MRChannelElement<O,V>> getComparator();

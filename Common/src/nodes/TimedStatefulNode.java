@@ -29,8 +29,6 @@ public abstract class TimedStatefulNode extends StatefulNode {
 	}
 
 	public void run() {
-		initiateReaderShufflers();
-
 		if(!performInitialization()) {
 			return;
 		}
@@ -52,10 +50,8 @@ public abstract class TimedStatefulNode extends StatefulNode {
 
 		performTermination();
 
-		closeOutputs();		
+		shutdown();		
 	}
-
-	protected abstract void initiateReaderShufflers();
 
 	protected abstract boolean dynamicallyVerifyTermination();
 }

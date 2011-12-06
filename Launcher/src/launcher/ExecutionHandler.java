@@ -158,7 +158,7 @@ public class ExecutionHandler extends Thread {
 					SHMInputChannel shmInputChannel = (SHMInputChannel) inputChannel;
 
 					if(shmChannelElementMultiplexer == null) {
-						shmChannelElementMultiplexer = new SHMChannelElementMultiplexer(node.getInputChannelNames());
+						shmChannelElementMultiplexer = new SHMChannelElementMultiplexer(node.getInputChannelNames(SHMInputChannel.class));
 
 						// For SHM, when creating the input pipe, map the associated output pipe for other nodes
 						mapChannelElementOutputStream.put(node.getName(), shmChannelElementMultiplexer);
@@ -195,7 +195,7 @@ public class ExecutionHandler extends Thread {
 					TCPInputChannel tcpInputChannel = (TCPInputChannel) inputChannel;
 
 					if(tcpChannelElementMultiplexer == null) {
-						tcpChannelElementMultiplexer = new TCPChannelElementMultiplexer(node.getInputChannelNames());
+						tcpChannelElementMultiplexer = new TCPChannelElementMultiplexer(node.getInputChannelNames(TCPInputChannel.class));
 
 						tcpInputChannel.setSocketAddress(tcpChannelElementMultiplexer.getAddress());
 

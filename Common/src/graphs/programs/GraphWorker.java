@@ -69,10 +69,6 @@ public abstract class GraphWorker<V extends GraphVertex,E extends GraphEdge> ext
 
 	@SuppressWarnings("unchecked")
 	protected void loadGraph() {
-		// Only wait for closing outputs of the structural nodes
-
-		createReaderShuffler(true, false);
-
 		graph = createGraph();
 
 		for(String applicationInput: getApplicationInputChannelNames()) {

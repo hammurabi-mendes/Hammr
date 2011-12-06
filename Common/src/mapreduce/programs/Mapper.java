@@ -80,7 +80,7 @@ public abstract class Mapper<O,V> extends Node {
 
 		finalizeMapping();
 
-		closeOutputs();
+		shutdown();
 	}
 
 	protected String calculateDestination(O object) {
