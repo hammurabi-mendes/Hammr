@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
-import org.jgrapht.graph.DefaultDirectedWeightedGraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
 
 import utilities.GraphOutputExtractor;
 
@@ -31,7 +31,7 @@ public class SPGraphOutputExtractor extends GraphOutputExtractor<SPGraphVertex,S
 	}
 
 	protected void createGraph() {
-		graph = new DefaultDirectedWeightedGraph<SPGraphVertex,SPGraphEdge>(SPGraphEdge.class);
+		graph = new DefaultDirectedGraph<SPGraphVertex,SPGraphEdge>(SPGraphEdge.class);
 	}
 
 	protected void printGraph() {

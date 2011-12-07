@@ -11,9 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package graphs.programs;
 
-import org.jgrapht.graph.DefaultWeightedEdge;
+import java.io.Serializable;
 
-public class GraphEdge extends DefaultWeightedEdge {
+public class GraphEdge implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private String name;

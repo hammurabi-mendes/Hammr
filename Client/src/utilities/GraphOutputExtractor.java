@@ -57,6 +57,8 @@ public abstract class GraphOutputExtractor<V extends GraphVertex,E extends Graph
 
 	@SuppressWarnings("unchecked")
 	public void run() throws IOException {
+		createGraph();
+
 		FileChannelElementReader[] readers = new FileChannelElementReader[inputs.length];
 
 		// First pass: add vertexes
@@ -111,6 +113,7 @@ public abstract class GraphOutputExtractor<V extends GraphVertex,E extends Graph
 			readers[i].close();
 		}
 
+		printGraph();
 	}
 
 	protected abstract void createGraph();

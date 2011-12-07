@@ -22,14 +22,6 @@ public class SPGraphEdge extends GraphEdge {
 		this.distance = distance;
 	}
 
-	public SPGraphVertex getSource() {
-		return (SPGraphVertex) super.getSource();
-	}
-
-	public SPGraphVertex getTarget() {
-		return (SPGraphVertex) super.getTarget();
-	}
-
 	public double getDistance() {
 		return distance;
 	}
