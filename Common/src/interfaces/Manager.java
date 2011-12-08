@@ -83,7 +83,17 @@ public interface Manager extends Remote {
 	 * 
 	 * @return The aggregator associated to the specified variable in the specified application. 
 	 */
-	public Aggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) throws RemoteException;
+	public ApplicationAggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) throws RemoteException;
+
+	/**
+	 * Returns the controller specified by the application name and controller name.
+	 * 
+	 * @param application The application name.
+	 * @param name The controller name;
+	 * 
+	 * @return The controller associated to the specified name in the specified application. 
+	 */
+	public ApplicationController obtainController(String application, String name) throws RemoteException;
 
 	/**
 	 * Notifies the master that a NodeGroup finished execution. This is called by the Launchers.

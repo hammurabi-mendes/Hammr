@@ -11,7 +11,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package manager;
 
-import interfaces.Aggregator;
+import interfaces.ApplicationAggregator;
+import interfaces.ApplicationController;
 import interfaces.Launcher;
 import interfaces.Manager;
 
@@ -256,7 +257,7 @@ public class ConcreteManager implements Manager {
 	 * 
 	 * @return The aggregator associated to the specified variable in the specified application. 
 	 */
-	public Aggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) {
+	public ApplicationAggregator<? extends Serializable, ? extends Serializable> obtainAggregator(String application, String variable) {
 		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
 
 		if(applicationInformationHolder == null) {
@@ -266,6 +267,27 @@ public class ConcreteManager implements Manager {
 		}
 
 		return applicationInformationHolder.getApplicationSpecification().getAggregator(variable);
+	}
+
+
+	/**
+	 * Returns the controller specified by the application name and controller name.
+	 * 
+	 * @param application The application name.
+	 * @param name The controller name;
+	 * 
+	 * @return The controller associated to the specified name in the specified application. 
+	 */
+	public ApplicationController obtainController(String application, String name) {
+		ApplicationInformationHolder applicationInformationHolder = applicationInformationHolders.get(application);
+
+		if(applicationInformationHolder == null) {
+			System.err.println("Unable to locate application information holder for application " + application + "!");
+
+			return null;
+		}
+
+		return applicationInformationHolder.getApplicationSpecification().getController(name);
 	}
 
 	/**

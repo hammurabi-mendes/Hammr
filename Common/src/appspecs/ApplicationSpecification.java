@@ -50,7 +50,8 @@ import enums.CommunicationMode;
 
 import exceptions.OverlapingFilesException;
 
-import interfaces.Aggregator;
+import interfaces.ApplicationAggregator;
+import interfaces.ApplicationController;
 
 public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private static final long serialVersionUID = 1L;
@@ -71,7 +72,9 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	protected Decider decider;
 
-	protected Map<String, Aggregator<? extends Serializable,? extends Serializable>> aggregators;
+	protected Map<String, ApplicationAggregator<? extends Serializable,? extends Serializable>> aggregators;
+
+	protected Map<String, ApplicationController> controllers;
 
 	protected String nameGenerationString = "node-";
 
@@ -98,7 +101,8 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		this.initials = new HashSet<Node>();
 
-		this.aggregators = new HashMap<String, Aggregator<? extends Serializable,? extends Serializable>>();
+		this.aggregators = new HashMap<String, ApplicationAggregator<? extends Serializable,? extends Serializable>>();
+		this.controllers = new HashMap<String, ApplicationController>();
 	}
 
 	public ApplicationSpecification() {
@@ -360,16 +364,28 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		return nameGenerationString + (nameGenerationCounter++);
 	}
 
-	public Aggregator<? extends Serializable,? extends Serializable> addAggregator(String variable, Aggregator<? extends Serializable,? extends Serializable> aggregator) {
+	public ApplicationAggregator<? extends Serializable,? extends Serializable> addAggregator(String variable, ApplicationAggregator<? extends Serializable,? extends Serializable> aggregator) {
 		return aggregators.put(variable, aggregator);
 	}
 
-	public Aggregator<? extends Serializable,? extends Serializable> getAggregator(String variable) {
+	public ApplicationAggregator<? extends Serializable,? extends Serializable> getAggregator(String variable) {
 		return aggregators.get(variable);
 	}
 
-	public Map<String, Aggregator<? extends Serializable,? extends Serializable>> getAggregators() {
+	public Map<String, ApplicationAggregator<? extends Serializable,? extends Serializable>> getAggregators() {
 		return aggregators;
+	}
+
+	public ApplicationController addController(String name, ApplicationController controller) {
+		return controllers.put(name, controller);
+	}
+
+	public ApplicationController getController(String name) {
+		return controllers.get(name);
+	}
+
+	public Map<String, ApplicationController> getControllers() {
+		return controllers;
 	}
 
 	public void finalize() throws OverlapingFilesException {

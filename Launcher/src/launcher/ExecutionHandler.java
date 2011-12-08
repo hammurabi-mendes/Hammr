@@ -16,12 +16,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.HashMap;
 
-import java.rmi.RemoteException;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 
 import java.net.InetSocketAddress;
+
+import utilities.RMIHelper;
 
 import communication.channel.InputChannel;
 import communication.channel.OutputChannel;
@@ -50,9 +50,12 @@ import execinfo.NodeGroup;
 import execinfo.ResultSummary;
 import execinfo.NodeMeasurements;
 
+import interfaces.Exportable;
 import interfaces.Manager;
 
 import exceptions.InexistentApplicationException;
+
+import java.rmi.RemoteException;
 
 /**
  * This class is responsible for running a specific NodeGroup previously submitted to the Launcher.
@@ -110,6 +113,15 @@ public class ExecutionHandler extends Thread {
 		// Stores runtime information; sent back to the master
 		// at the end of the execution.
 		ResultSummary resultSummary;
+
+		// Exports all the nodes that should be exported,
+		// so their remote reference can be used externally
+
+		for(Node node: nodeGroup.getNodes()) {
+			if(node instanceof Exportable) {
+				RMIHelper.exportRemoteObject((Exportable) node);
+			}
+		}
 
 		try {
 			setupCommunication();

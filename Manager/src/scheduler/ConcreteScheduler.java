@@ -53,7 +53,8 @@ import utilities.RMIHelper;
 import utilities.filesystem.FileHelper;
 import utilities.filesystem.Filename;
 
-import interfaces.Aggregator;
+import interfaces.ApplicationAggregator;
+import interfaces.ApplicationController;
 
 import interfaces.Launcher;
 
@@ -165,9 +166,17 @@ public class ConcreteScheduler implements Scheduler {
 		// Exports all the aggregators
 
 		for(String variable: applicationSpecification.getAggregators().keySet()) {
-			Aggregator<? extends Serializable,? extends Serializable> aggregator = applicationSpecification.getAggregator(variable);
+			ApplicationAggregator<? extends Serializable,? extends Serializable> aggregator = applicationSpecification.getAggregator(variable);
 
 			RMIHelper.exportRemoteObject(aggregator);
+		}
+
+		// Exports all the controllers
+
+		for(String variable: applicationSpecification.getControllers().keySet()) {
+			ApplicationController controller = applicationSpecification.getController(variable);
+
+			RMIHelper.exportRemoteObject(controller);
 		}
 	}
 
@@ -333,7 +342,7 @@ public class ConcreteScheduler implements Scheduler {
 	public synchronized boolean finishedApplication() {
 		Decider decider = applicationSpecification.getDecider();
 
-		Map<String, Aggregator<? extends Serializable,? extends Serializable>> aggregators = applicationSpecification.getAggregators();
+		Map<String, ApplicationAggregator<? extends Serializable,? extends Serializable>> aggregators = applicationSpecification.getAggregators();
 
 		if(decider == null) {
 			return true;

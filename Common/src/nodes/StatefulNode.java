@@ -31,8 +31,9 @@ public abstract class StatefulNode extends Node {
 			if(channelElement == null) {
 				break;
 			}
-
-			performAction(channelElement);
+			else {
+				performAction(channelElement);
+			}
 		}
 
 		performTermination();

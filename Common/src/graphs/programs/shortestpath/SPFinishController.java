@@ -9,38 +9,51 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package appspecs;
+package graphs.programs.shortestpath;
 
-import java.io.Serializable;
+import java.util.List;
+import java.util.ArrayList;
 
-import java.util.Map;
+import interfaces.ApplicationController;
 
-import interfaces.ApplicationAggregator;
+import interfaces.Exportable;
+import interfaces.ExportableActivatable;
 
-public abstract class Decider implements Serializable {
+import java.rmi.RemoteException;
+
+public class SPFinishController implements ApplicationController {
 	private static final long serialVersionUID = 1L;
 
-	protected ApplicationSpecification applicationSpecification;
+	private int numberWorkers;
 
-	private boolean requiresRunning;
+	private List<Exportable> workers;
 
-	protected Map<String, ApplicationAggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables;
+	public SPFinishController(String variable, int numberWorkers) {
+		this.numberWorkers = numberWorkers;
 
-	public Decider(ApplicationSpecification applicationSpecification) {
-		this.applicationSpecification = applicationSpecification;
-
-		this.requiresRunning = true;
+		this.workers = new ArrayList<Exportable>();
 	}
 
-	public boolean requiresRunning() {
-		return requiresRunning;
+	public synchronized void notifyStart(Exportable worker) {
 	}
 
-	public void decideFollowingIteration(Map<String, ApplicationAggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables) {
-		this.aggregatedVariables = aggregatedVariables;
+	public synchronized void notifyFinish(Exportable worker) {
+		workers.add(worker);
 
-		decideFollowingIteration();
+		if(workers.size() >= numberWorkers) {
+			terminateWorkers();
+		}	
 	}
 
-	protected abstract void decideFollowingIteration();
+	private void terminateWorkers() {
+		for(Exportable worker: workers) {
+			try {
+				if(worker instanceof ExportableActivatable) {
+					((ExportableActivatable) worker).setActive(false);
+				}
+			} catch (RemoteException exception) {
+				System.err.println("Unable to contact activatable node");
+			}
+		}
+	}
 }

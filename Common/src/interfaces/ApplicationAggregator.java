@@ -17,7 +17,7 @@ import java.rmi.Remote;
 
 import java.rmi.RemoteException;
 
-public interface Aggregator<I extends Serializable, O extends Serializable> extends Remote {
+public interface ApplicationAggregator<I extends Serializable, O extends Serializable> extends Remote, Serializable {
 	public void updateAggregate(I object) throws RemoteException;
 
 	public O obtainAggregate() throws RemoteException; 
