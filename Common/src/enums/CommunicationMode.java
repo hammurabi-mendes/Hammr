@@ -14,5 +14,5 @@ package enums;
 import java.io.Serializable;
 
 public enum CommunicationMode implements Serializable {
-	SHM, TCP, FILE;
+	SHM, TCP, FILE, NODEBOX, TIMEBOX;
 }

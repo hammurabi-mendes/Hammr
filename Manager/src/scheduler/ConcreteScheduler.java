@@ -219,7 +219,7 @@ public class ConcreteScheduler implements Scheduler {
 				for(Edge connection: applicationSpecification.outgoingEdgesOf(current)) {
 					neighbor = connection.getTarget();
 
-					if(connection.getCommunicationMode() == CommunicationMode.SHM) {
+					if(connection.getCommunicationMode() == CommunicationMode.SHM || connection.getCommunicationMode() == CommunicationMode.NODEBOX) {
 						if(!neighbor.isMarked()) {
 							neighbor.setMark(spammerIdentifier);
 							queue.add(neighbor);
@@ -268,7 +268,7 @@ public class ConcreteScheduler implements Scheduler {
 		Node source, target;
 
 		for(Edge edge: applicationSpecification.edgeSet()) {
-			if(edge.getCommunicationMode() == CommunicationMode.TCP) {
+			if(edge.getCommunicationMode() == CommunicationMode.TCP || edge.getCommunicationMode() == CommunicationMode.TIMEBOX) {
 				source = edge.getSource();
 				target = edge.getTarget();
 
