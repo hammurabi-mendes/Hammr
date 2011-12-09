@@ -338,6 +338,8 @@ public class ConcreteManager implements Manager {
 				}
 				else {
 					scheduler.prepareIteration();
+
+					scheduler.schedule();
 				}
 			}
 			else {

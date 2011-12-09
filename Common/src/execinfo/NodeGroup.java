@@ -49,8 +49,6 @@ public class NodeGroup implements Serializable {
 	// PARSING INFORMATION //
 	/////////////////////////
 
-	private NodeGroupBundle nodeGroupBundle;
-
 	private MutableInteger mark;
 
 	public NodeGroup(String application, Node node) {
@@ -151,14 +149,6 @@ public class NodeGroup implements Serializable {
 		this.manager = manager;
 	}
 
-	public void setNodeGroupBundle(NodeGroupBundle nodeGroupBundle) {
-		this.nodeGroupBundle = nodeGroupBundle;
-	}
-
-	public NodeGroupBundle getNodeGroupBundle() {
-		return nodeGroupBundle;
-	}
-
 	public MutableInteger getMark() {
 		return mark;
 	}
@@ -178,8 +168,6 @@ public class NodeGroup implements Serializable {
 
 	public void prepareSchedule(long serialNumber) {
 		setSerialNumber(serialNumber);
-
-		setNodeGroupBundle(null);
 
 		setMark(null);
 	}

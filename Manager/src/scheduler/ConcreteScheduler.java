@@ -82,6 +82,8 @@ public class ConcreteScheduler implements Scheduler {
 
 	private long serialNumberCounter = 1L;
 
+	private Map<NodeGroup, NodeGroupBundle> convertGroupToBundle;
+
 	/**
 	 * Constructor method.
 	 * 
@@ -107,11 +109,21 @@ public class ConcreteScheduler implements Scheduler {
 
 		this.runningNodeGroups = new HashMap<Long, NodeGroup>();
 
+		this.convertGroupToBundle = new HashMap<NodeGroup, NodeGroupBundle>();
+
 		// Parse the application graph
 
 		long graphParsingStartTimer = System.currentTimeMillis();
 
 		Map<MutableInteger, NodeGroupBundle> nodeGroupBundles = getNodeGroupBundles();
+
+		// Map the NodeGroups to the NodeGroupBundles
+
+		for(NodeGroupBundle nodeGroupBundle: nodeGroupBundles.values()) {
+			for(NodeGroup nodeGroup: nodeGroupBundle.getNodeGroups()) {
+				convertGroupToBundle.put(nodeGroup, nodeGroupBundle);
+			}
+		}
 
 		long graphParsingEndingTimer = System.currentTimeMillis();
 
@@ -140,7 +152,7 @@ public class ConcreteScheduler implements Scheduler {
 				source = edge.getSource();
 				target = edge.getTarget();
 
-				nodeGroupBundleGraph.addEdge(source.getNodeGroup().getNodeGroupBundle(), target.getNodeGroup().getNodeGroupBundle());
+				nodeGroupBundleGraph.addEdge(convertGroupToBundle.get(source.getNodeGroup()), convertGroupToBundle.get(target.getNodeGroup()));
 			}
 		}
 
@@ -157,7 +169,7 @@ public class ConcreteScheduler implements Scheduler {
 				source = edge.getSource();
 				target = edge.getTarget();
 
-				if(source.getNodeGroup().getNodeGroupBundle() == target.getNodeGroup().getNodeGroupBundle()) {
+				if(convertGroupToBundle.get(source.getNodeGroup()) == convertGroupToBundle.get(target.getNodeGroup())) {
 					throw new TemporalDependencyException(source, target);
 				}
 			}
@@ -355,7 +367,7 @@ public class ConcreteScheduler implements Scheduler {
 
 		// Returns true if the decider prepared a following iteration
 
-		return decider.requiresRunning();
+		return !decider.requiresRunning();
 	}
 
 	/**
@@ -401,7 +413,7 @@ public class ConcreteScheduler implements Scheduler {
 		// Notify the dependency manager that the initial nodes should be immediately available to schedule
 
 		for(Node initial: initials) {
-			dependencyManager.insertDependency(null, initial.getNodeGroup().getNodeGroupBundle());
+			dependencyManager.insertDependency(null, convertGroupToBundle.get(initial.getNodeGroup()));
 		}
 
 		// Notify the other dependencies for the dependency manager
@@ -411,7 +423,7 @@ public class ConcreteScheduler implements Scheduler {
 				source = edge.getSource();
 				target = edge.getTarget();
 
-				dependencyManager.insertDependency(source.getNodeGroup(), target.getNodeGroup().getNodeGroupBundle());
+				dependencyManager.insertDependency(source.getNodeGroup(), convertGroupToBundle.get(target.getNodeGroup()));
 			}
 		}
 
@@ -497,12 +509,19 @@ public class ConcreteScheduler implements Scheduler {
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive the informed NodeGroup.
 	 */
 	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
+		// Setup the previous/current launcher and manager references in the node group
+
+		nodeGroup.setPreviousLauncher(nodeGroup.getPreviousLauncher());
+		nodeGroup.setManager(ConcreteManager.getInstance());
+
 		// First, try to reschedule the node group to the same launcher used before
 
 		Launcher previousLauncher = nodeGroup.getPreviousLauncher();
 
 		if(previousLauncher != null) {
 			try {
+				nodeGroup.setCurrentLauncher(previousLauncher);
+
 				if(previousLauncher.addNodeGroup(nodeGroup)) {
 					// Add node group to the running group
 					runningNodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);
@@ -522,10 +541,9 @@ public class ConcreteScheduler implements Scheduler {
 			try {
 				Launcher launcher = currentLaunchers.get(i);
 
-				if(launcher.addNodeGroup(nodeGroup)) {
-					// Remember this scheduling decision
-					nodeGroup.setPreviousLauncher(launcher);
+				nodeGroup.setCurrentLauncher(launcher);
 
+				if(launcher.addNodeGroup(nodeGroup)) {
 					// Add node group to the running group
 					runningNodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);
 

@@ -106,10 +106,6 @@ public class ExecutionHandler extends Thread {
 	 * Runs the NodeGroup in separate threads, one thread for each Node.
 	 */
 	public void run() {
-		// Makes the current launcher and current manager accessible to the nodes
-		nodeGroup.setCurrentLauncher(concreteLauncher);
-		nodeGroup.setManager(manager);
-
 		// Stores runtime information; sent back to the master
 		// at the end of the execution.
 		ResultSummary resultSummary;

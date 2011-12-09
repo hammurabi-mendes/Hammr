@@ -38,33 +38,13 @@ public class NodeGroupBundle implements Serializable {
 	}	
 
 	public boolean addNodeGroup(NodeGroup nodeGroup) {
-		if(nodeGroup.getNodeGroupBundle() != null) {
-			assert false;
-
-			return false;
-		}
-
-		nodeGroup.setNodeGroupBundle(this);
-
 		set.add(nodeGroup);
 
 		return true;
 	}
 
 	public boolean addNodeGroups(Set<NodeGroup> nodeGroups) {
-		for(NodeGroup nodeGroup: nodeGroups) {
-			if(nodeGroup.getNodeGroupBundle() != null) {
-				assert false;
-
-				return false;
-			}
-		}
-
-		for(NodeGroup nodeGroup: nodeGroups) {
-			nodeGroup.setNodeGroupBundle(this);
-
-			set.add(nodeGroup);
-		}	
+		set.addAll(nodeGroups);
 
 		return true;
 	}
