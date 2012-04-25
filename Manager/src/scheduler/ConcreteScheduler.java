@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011, Hammurabi Mendes
+Copyright (c) 2012, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -17,6 +17,7 @@ import java.rmi.RemoteException;
 
 import java.util.Collections;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.Map;
 import java.util.List;
@@ -38,6 +39,11 @@ import execinfo.NodeGroupBundle;
 import exceptions.InexistentInputException;
 import exceptions.InexistentOutputException;
 
+import exceptions.ParsingNodeGroupPlacementException;
+
+import exceptions.RuntimeGlobalPlacementException;
+import exceptions.RuntimeNodeGroupPlacementException;
+
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
@@ -46,6 +52,8 @@ import appspecs.ApplicationSpecification;
 import appspecs.Decider;
 import appspecs.Node;
 import appspecs.Edge;
+
+import security.restrictions.LauncherRestrictions;
 
 import utilities.MutableInteger;
 import utilities.RMIHelper;
@@ -99,8 +107,10 @@ public class ConcreteScheduler implements Scheduler {
 	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
 	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
 	 *                                   A cyclic is only a problem when it involves files (TCP/SHM cycles are allowed).
+	 * @throws ParsingNodeGroupPlacementException If none of the (existing) alive launchers would ever meet the restrictions imposed by all
+	 *         members of the NodeGroup parsed.
 	 */
-	public synchronized void prepareApplication() throws TemporalDependencyException, CyclicDependencyException {
+	public synchronized void prepareApplication() throws TemporalDependencyException, CyclicDependencyException, ParsingNodeGroupPlacementException {
 		// Initiate data structures
 
 		this.applicationSpecification = ConcreteManager.getInstance().getApplicationInformationHolder(applicationName).getApplicationSpecification();
@@ -175,6 +185,28 @@ public class ConcreteScheduler implements Scheduler {
 			}
 		}
 
+		// Detect node placement problems: two nodes in the same NodeGroup with different placement restrictions
+		for(NodeGroup nodeGroup: nodeGroups.values()) {
+			Set<String> intersection = null;
+
+			for(Node node: nodeGroup.getNodes()) {
+				LauncherRestrictions nodeRestriction = applicationSpecification.obtainNodeRestriction(node);
+
+				if(nodeRestriction != null && nodeRestriction.getLauncherIds().size() > 0) {
+					if(intersection == null) {
+						intersection = new HashSet<String>(nodeRestriction.getLauncherIds());
+					}
+					else {
+						intersection.retainAll(nodeRestriction.getLauncherIds());
+					}
+				}
+			}
+
+			if(intersection != null && intersection.size() == 0) {
+				throw new ParsingNodeGroupPlacementException();
+			}
+		}
+
 		// Exports all the aggregators
 
 		for(String variable: applicationSpecification.getAggregators().keySet()) {
@@ -189,6 +221,23 @@ public class ConcreteScheduler implements Scheduler {
 			ApplicationController controller = applicationSpecification.getController(variable);
 
 			RMIHelper.exportRemoteObject(controller);
+		}
+
+		// Sets each node group for execution in a separate JVM according to the application
+		// and individual restrictions
+
+		for(NodeGroup nodeGroup: nodeGroups.values()) {
+			for(Node node: nodeGroup.getNodes()) {
+				if(applicationSpecification.getGlobalRestrictions() != null && applicationSpecification.getGlobalRestrictions().isUseSeparateJVM()) {
+					nodeGroup.setUseSeparateJVM(true);
+					break;
+				}
+
+				if(applicationSpecification.obtainNodeRestriction(node) != null && applicationSpecification.obtainNodeRestriction(node).isUseSeparateJVM()) {
+					nodeGroup.setUseSeparateJVM(true);
+					break;
+				}
+			}
 		}
 	}
 
@@ -475,8 +524,11 @@ public class ConcreteScheduler implements Scheduler {
 	 * @return False if no NodeGroupBundle is available to execution; true otherwise.
 	 * 
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
+	 * @throws RuntimeGlobalPlacementException If none of the (existing) alive launchers meet the global restrictions imposed.
+	 * @throws RuntimeNodeGroupPlacementException If none of the (existing) alive launchers meet the restrictions imposed by all
+	 *         members of the NodeGroup being scheduled.
 	 */
-	public synchronized boolean schedule() throws InsufficientLaunchersException {
+	public synchronized boolean schedule() throws InsufficientLaunchersException, RuntimeGlobalPlacementException, RuntimeNodeGroupPlacementException {
 		if(!dependencyManager.hasUnlockedDependents()) {
 			return false;
 		}
@@ -496,8 +548,11 @@ public class ConcreteScheduler implements Scheduler {
 	 * Try to schedule the informed NodeGroupBundle.
 	 * 
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive NodeGroups.
+	 * @throws RuntimeGlobalPlacementException If none of the (existing) alive launchers meet the global restrictions imposed.
+	 * @throws RuntimeNodeGroupPlacementException If none of the (existing) alive launchers meet the restrictions imposed by all
+	 *         members of the NodeGroup being scheduled.
 	 */
-	private void scheduleNodeGroupBundle(NodeGroupBundle nodeGroupBundle) throws InsufficientLaunchersException {
+	private void scheduleNodeGroupBundle(NodeGroupBundle nodeGroupBundle) throws InsufficientLaunchersException, RuntimeGlobalPlacementException, RuntimeNodeGroupPlacementException {
 		for(NodeGroup nodeGroup: nodeGroupBundle.getNodeGroups()) {
 			scheduleNodeGroup(nodeGroup);
 		}
@@ -507,11 +562,15 @@ public class ConcreteScheduler implements Scheduler {
 	 * Try to schedule the informed NodeGroup.
 	 * 
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive the informed NodeGroup.
+	 * 
+	 * @throws RuntimeGlobalPlacementException If none of the (existing) alive launchers meet the global restrictions imposed.
+	 * @throws RuntimeNodeGroupPlacementException If none of the (existing) alive launchers meet the restrictions imposed by all
+	 *         members of the NodeGroup being scheduled.
 	 */
-	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException {
+	private void scheduleNodeGroup(NodeGroup nodeGroup) throws InsufficientLaunchersException, RuntimeGlobalPlacementException, RuntimeNodeGroupPlacementException {
 		// Setup the previous/current launcher and manager references in the node group
 
-		nodeGroup.setPreviousLauncher(nodeGroup.getPreviousLauncher());
+		nodeGroup.setPreviousLauncher(nodeGroup.getCurrentLauncher());
 		nodeGroup.setManager(ConcreteManager.getInstance());
 
 		// First, try to reschedule the node group to the same launcher used before
@@ -533,7 +592,9 @@ public class ConcreteScheduler implements Scheduler {
 			}
 		}
 
-		List<Launcher> currentLaunchers = new ArrayList<Launcher>(ConcreteManager.getInstance().getRegisteredLaunchers());
+		Collection<Launcher> collectionCurrentLaunchers = ConcreteManager.getInstance().getRegisteredLaunchers(applicationSpecification.getName(), nodeGroup.getNodes());
+
+		List<Launcher> currentLaunchers = new ArrayList<Launcher>(collectionCurrentLaunchers);
 
 		Collections.shuffle(currentLaunchers);
 

@@ -16,9 +16,9 @@ import java.util.Collection;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-import execinfo.NodeGroup;
+import execinfo.LauncherInformation;
 
-import execinfo.LauncherStatus;
+import execinfo.NodeGroup;
 
 /**
  * Launcher remote interface. These functions can be called by remote machines.
@@ -34,11 +34,11 @@ public interface Launcher extends Remote {
 	public String getId() throws RemoteException;
 
 	/**
-	 * Obtains the status of the Launcher.
+	 * Obtains the information regarding the Launcher.
 	 * 
-	 * @return The status of the Launcher.
+	 * @return The information regarding the Launcher.
 	 */
-	public LauncherStatus getStatus() throws RemoteException;
+	public LauncherInformation getInformation() throws RemoteException;
 
 	/**
 	 * Submits a NodeGroup for execution, and adjust the number of occupied slots in the
@@ -56,6 +56,16 @@ public interface Launcher extends Remote {
 	 * @return The current running NodeGroups.
 	 */
 	public Collection<NodeGroup> getNodeGroups() throws RemoteException;
+
+	/**
+	 * Removes a NodeGroup from the list of running NodeGroups, and adjust the number of occupied slots
+	 * in the launcher.
+	 * 
+	 * @param serialNumber Serial number of the NodeGroup to be removed.
+	 * 
+	 * @return True if the NodeGroup informed was previously present in the list of running NodeGroups.
+	 */
+	public boolean delNodeGroup(long serialNumber) throws RemoteException;
 
 	/**
 	 * Get the object from the launcher cache associated with the specified entry.

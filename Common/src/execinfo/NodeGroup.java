@@ -44,6 +44,8 @@ public class NodeGroup implements Serializable {
 	private Launcher previousLauncher;
 
 	private Manager manager;
+	
+	private boolean useSeparateJVM;
 
 	/////////////////////////
 	// PARSING INFORMATION //
@@ -147,6 +149,14 @@ public class NodeGroup implements Serializable {
 
 	public void setManager(Manager manager) {
 		this.manager = manager;
+	}
+
+	public boolean isUseSeparateJVM() {
+		return useSeparateJVM;
+	}
+
+	public void setUseSeparateJVM(boolean useSeparateJVM) {
+		this.useSeparateJVM = useSeparateJVM;
 	}
 
 	public MutableInteger getMark() {

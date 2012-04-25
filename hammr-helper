@@ -23,6 +23,12 @@ BINDIRS=$COMMONDIR:$BASEDIR/Client/bin:$BASEDIR/Launcher/bin:$BASEDIR/Manager/bi
 # We are memory hungry! Reserve heap space for the JVM
 HEAPPARAMS="-XX:-UseGCOverheadLimit -Xms2500M -Xmx2500M"
 
+KEYSTORE="$BASEDIR/Common/keystore"
+KEYSTORE_PWD="123456"
+
+TRUSTSTORE="$BASEDIR/Common/truststore"
+TRUSTSTORE_PWD="123456"
+
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
 export CLASSPATH=$BINDIRS:$JGRAPHFILE:$HADOOPFILE

@@ -11,6 +11,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package launcher;
 
+import java.io.Serializable;
+
+import java.rmi.RemoteException;
 import java.util.Iterator;
 
 import java.util.Map;
@@ -55,19 +58,17 @@ import interfaces.Manager;
 
 import exceptions.InexistentApplicationException;
 
-import java.rmi.RemoteException;
-
 /**
  * This class is responsible for running a specific NodeGroup previously submitted to the Launcher.
  * 
  * @author Hammurabi Mendes (hmendes)
  */
-public class ExecutionHandler extends Thread {
-	private Manager manager;
+public class ExecutionHandler implements Runnable, Serializable {
+	private static final long serialVersionUID = 1L;
 
-	private ConcreteLauncher concreteLauncher;
+	protected Manager manager;
 
-	private NodeGroup nodeGroup;
+	protected NodeGroup nodeGroup;
 
 	/**
 	 * Constructor.
@@ -76,10 +77,8 @@ public class ExecutionHandler extends Thread {
 	 * @param concreteLauncher Reference to the local launcher.
 	 * @param nodeGroup NodeGroup that should be run.
 	 */
-	public ExecutionHandler(Manager manager, ConcreteLauncher concreteLauncher, NodeGroup nodeGroup) {
+	public ExecutionHandler(Manager manager, NodeGroup nodeGroup) {
 		this.manager = manager;
-
-		this.concreteLauncher = concreteLauncher;
 
 		this.nodeGroup = nodeGroup;
 	}
@@ -321,8 +320,15 @@ public class ExecutionHandler extends Thread {
 	 * 
 	 * @return True if the master was properly notified; false otherwise.
 	 */
-	private boolean finishExecution(ResultSummary resultSummary) {
-		concreteLauncher.delNodeGroup(nodeGroup);
+	protected boolean finishExecution(ResultSummary resultSummary) {
+		try {
+			nodeGroup.getCurrentLauncher().delNodeGroup(nodeGroup.getSerialNumber());
+		} catch (RemoteException exception) {
+			System.err.println("Unable to communicate termination to the launcher");
+
+			exception.printStackTrace();
+			return false;
+		}
 
 		try {
 			manager.handleTermination(resultSummary);

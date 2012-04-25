@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011, Hammurabi Mendes
+Copyright (c) 2012, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -20,13 +20,16 @@ import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import java.rmi.RemoteException;
 
-import execinfo.LauncherStatus;
+import execinfo.LauncherInformation;
 import execinfo.NodeGroup;
+
+import security.CollocationStatus;
 
 import utilities.RMIHelper;
 
@@ -45,9 +48,7 @@ public class ConcreteLauncher implements Launcher {
 
 	private Manager manager;
 
-	private String id;
-
-	private LauncherStatus launcherStatus;
+	private LauncherInformation launcherInformation;
 
 	private Map<Long, NodeGroup> nodeGroups;
 
@@ -116,9 +117,42 @@ public class ConcreteLauncher implements Launcher {
 	private ConcreteLauncher(String registryLocation) throws RemoteException, UnknownHostException {
 		manager = (Manager) RMIHelper.locateRemoteObject(registryLocation, "Manager");
 
-		id = "Launcher".concat(RMIHelper.getUniqueID());
+		String id = "Launcher".concat(RMIHelper.getUniqueID());
 
-		launcherStatus = new LauncherStatus(id, InetAddress.getLocalHost().getHostName(), "default_rack", NUMBER_SLOTS_DEFAULT);
+		launcherInformation = new LauncherInformation(id, InetAddress.getLocalHost().getHostName(), "default_rack", NUMBER_SLOTS_DEFAULT);
+
+		// Stores script-informed user and application restrictions,
+		// as well as collocation status
+
+		String userRestrictions = System.getProperty("hammr.launcher.user_restrictions");
+		String applicationRestrictions = System.getProperty("hammr.launcher.application_restrictions");
+		String nodeRestrictions = System.getProperty("hammr.launcher.node_restrictions");
+
+		String collocationStatus = System.getProperty("hammr.launcher.collocation_status");
+
+		if(userRestrictions != null) {
+			launcherInformation.setUserRestrictions(userRestrictions.split(":"));
+		}
+
+		if(applicationRestrictions != null) {
+			launcherInformation.setApplicationRestrictions(applicationRestrictions.split(":"));
+		}
+
+		if(nodeRestrictions != null) {
+			launcherInformation.setNodeRestrictions(nodeRestrictions.split(":"));
+		}
+
+		if(collocationStatus != null) {
+			if(collocationStatus.equals("isolated")) {
+				launcherInformation.setCollocationStatus(CollocationStatus.ISOLATED);
+			}
+			else if(collocationStatus.equals("shared_sameuser")) {
+				launcherInformation.setCollocationStatus(CollocationStatus.SHARED_SAMEUSER);
+			}
+			else if(collocationStatus.equals("shared_otheruser")) {
+				launcherInformation.setCollocationStatus(CollocationStatus.SHARED_OTHERUSER);
+			}
+		}
 
 		nodeGroups = Collections.synchronizedMap(new HashMap<Long, NodeGroup>());
 
@@ -159,16 +193,16 @@ public class ConcreteLauncher implements Launcher {
 	 * @return The ID of the launcher.
 	 */
 	public String getId() {
-		return id;
+		return launcherInformation.getId();
 	}
 
 	/**
-	 * Obtains the status of the Launcher.
+	 * Obtains information regarding the Launcher.
 	 * 
-	 * @return The status of the Launcher.
+	 * @return The information regarding the Launcher.
 	 */
-	public LauncherStatus getStatus() {
-		return launcherStatus;
+	public LauncherInformation getInformation() {
+		return launcherInformation;
 	}
 
 	/**
@@ -180,17 +214,34 @@ public class ConcreteLauncher implements Launcher {
 	 * @return True if the NodeGroup fits into the number of free slots available; false otherwise.
 	 */
 	public synchronized boolean addNodeGroup(NodeGroup nodeGroup) {
-		if(launcherStatus.getFreeSlots() < nodeGroup.getSize()) {
+		if(launcherInformation.getFreeSlots() < nodeGroup.getSize()) {
 			return false;
 		}
 
 		nodeGroups.put(nodeGroup.getSerialNumber(), nodeGroup);
 
-		ExecutionHandler executionHandler = new ExecutionHandler(manager, this, nodeGroup);
+		if(nodeGroup.isUseSeparateJVM()) {
+			RemoteExecutionHandler executionHandler = new RemoteExecutionHandler(manager, nodeGroup);
+
+			RemoteExecutionHandler.writeExecutionHandler(".", Integer.valueOf(nodeGroup.hashCode()).toString() + ".exe", executionHandler);
+
+			String[] commandArray = {"java", "RemoteExecutionHandler", ".", Integer.valueOf(nodeGroup.hashCode()).toString()};
+
+			try {
+				Runtime.getRuntime().exec(commandArray);
+			} catch (IOException exception) {
+				System.err.println("Error executing NodeGroup: " + exception);
+				return false;
+			}
+
+			return true;
+		}
+
+		ExecutionHandler executionHandler = new ExecutionHandler(manager, nodeGroup);
 
 		executorService.execute(executionHandler);
 
-		launcherStatus.setOcupiedSlots(launcherStatus.getOcupiedSlots() + nodeGroup.getSize());
+		launcherInformation.setOcupiedSlots(launcherInformation.getOcupiedSlots() + nodeGroup.getSize());
 
 		return true;
 	}
@@ -203,11 +254,13 @@ public class ConcreteLauncher implements Launcher {
 	 * 
 	 * @return True if the NodeGroup informed was previously present in the list of running NodeGroups.
 	 */
-	public synchronized boolean delNodeGroup(NodeGroup nodeGroup) {
-		if(nodeGroups.containsKey(nodeGroup.getSerialNumber())) {
-			launcherStatus.setOcupiedSlots(launcherStatus.getOcupiedSlots() - nodeGroup.getSize());
+	public synchronized boolean delNodeGroup(long serialNumber) {
+		if(nodeGroups.containsKey(serialNumber)) {
+			NodeGroup nodeGroup = nodeGroups.get(serialNumber);
 
-			nodeGroups.remove(nodeGroup.getSerialNumber());
+			launcherInformation.setOcupiedSlots(launcherInformation.getOcupiedSlots() - nodeGroup.getSize());
+
+			nodeGroups.remove(serialNumber);
 
 			return true;
 		}

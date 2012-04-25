@@ -34,6 +34,9 @@ import utilities.filesystem.Directory;
 import utilities.filesystem.Filename;
 import utilities.filesystem.Protocol;
 
+import security.authenticators.Authenticator;
+import security.restrictions.LauncherRestrictions;
+
 import communication.channel.InputChannel;
 import communication.channel.OutputChannel;
 
@@ -57,6 +60,10 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 	private static final long serialVersionUID = 1L;
 
 	protected String name;
+
+	protected Authenticator userAuthenticator;
+	protected Authenticator applicationAuthenticator;
+
 	protected Directory baseDirectory;
 
 	protected Map<Filename, Set<Node>> inputToNodes;
@@ -84,6 +91,12 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	protected long relinkedFileChannelCounter = 0L;
 
+	protected LauncherRestrictions globalLauncherRestrictions;
+
+	protected Map<Node, LauncherRestrictions> nodeRestrictions;
+
+	protected Map<Node, Authenticator> nodeAuthenticators;
+
 	public ApplicationSpecification(String name, Directory baseDirectory) {
 		super(Edge.class);
 
@@ -103,6 +116,9 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 		this.aggregators = new HashMap<String, ApplicationAggregator<? extends Serializable,? extends Serializable>>();
 		this.controllers = new HashMap<String, ApplicationController>();
+
+		this.nodeRestrictions = new HashMap<Node, LauncherRestrictions>();
+		this.nodeAuthenticators = new HashMap<Node, Authenticator>();
 	}
 
 	public ApplicationSpecification() {
@@ -116,12 +132,24 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 		insertEdges(edges);
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getName() {
 		return name;
+	}
+
+	public Authenticator getUserAuthenticator() {
+		return userAuthenticator;
+	}
+
+	public void setUserAuthenticator(Authenticator authenticator) {
+		this.userAuthenticator = authenticator;
+	}
+
+	public Authenticator getApplicationAuthenticator() {
+		return applicationAuthenticator;
+	}
+
+	public void setApplicationAuthenticator(Authenticator authenticator) {
+		this.applicationAuthenticator = authenticator;
 	}
 
 	public Decider getDecider() {
@@ -386,6 +414,42 @@ public class ApplicationSpecification extends DefaultDirectedGraph<Node, Edge> {
 
 	public Map<String, ApplicationController> getControllers() {
 		return controllers;
+	}
+
+	public LauncherRestrictions getGlobalRestrictions() {
+		return globalLauncherRestrictions;
+	}
+
+	public void setGlobalRestrictions(LauncherRestrictions restrictions) {
+		this.globalLauncherRestrictions = restrictions;
+	}
+
+	public void insertNodeRestriction(Node node, LauncherRestrictions restrictions) {
+		nodeRestrictions.put(node, restrictions);
+	}
+
+	public LauncherRestrictions obtainNodeRestriction(Node node) {
+		return nodeRestrictions.get(node);
+	}
+
+	public void removeNodeRestriction(Node node) {
+		nodeRestrictions.remove(node);
+	}
+
+	public void insertNodeAuthenticator(Node node, Authenticator authenticator) {
+		nodeAuthenticators.put(node, authenticator);
+	}
+
+	public Authenticator obtainNodeAuthenticator(Node node) {
+		return nodeAuthenticators.get(node);
+	}
+
+	public void removeNodeAuthenticator(Node node) {
+		nodeAuthenticators.remove(node);
+	}
+
+	public Map<Node,Authenticator> getNodeAuthenticators() {
+		return nodeAuthenticators;
 	}
 
 	public void finalize() throws OverlapingFilesException {

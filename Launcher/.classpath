@@ -3,7 +3,7 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/Common"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/gpfs/main/home/hmendes/Hammr/lib/jgrapht-jdk1.6.jar"/>
-	<classpathentry kind="lib" path="/gpfs/main/home/hmendes/Hammr/lib/hadoop-0.20.2-core.jar"/>
+	<classpathentry kind="lib" path="/Users/hmendes/Documents/workspace/Hammr/lib/jgrapht-jdk1.6.jar"/>
+	<classpathentry kind="lib" path="/Users/hmendes/Documents/workspace/Hammr/lib/hadoop-0.20.2-core.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

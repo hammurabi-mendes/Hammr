@@ -11,6 +11,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 package scheduler;
 
+import exceptions.ParsingNodeGroupPlacementException;
+
+import exceptions.RuntimeGlobalPlacementException;
+import exceptions.RuntimeNodeGroupPlacementException;
+
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
@@ -29,8 +34,10 @@ public interface Scheduler {
 	 * 
 	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
 	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
+	 * @throws ParsingNodeGroupPlacementException  If the application has two node placement restrictions that conflict, i.e.,
+	 *                                         they specify different Launchers but the nodes are in the same NodeGroup.
 	 */
-	public void prepareApplication() throws TemporalDependencyException, CyclicDependencyException;
+	public void prepareApplication() throws TemporalDependencyException, CyclicDependencyException, ParsingNodeGroupPlacementException ;
 
 	/**
 	 * Terminates the application .
@@ -72,8 +79,11 @@ public interface Scheduler {
 	 * @return False if no NodeGroupBundle is available to execution; true otherwise.
 	 * 
 	 * @throws InsufficientLaunchersException If no alive Launcher can receive the next wave of NodeGroups.
+	 * @throws RuntimeGlobalPlacementException If none of the (existing) alive launchers meet the global restrictions imposed.
+	 * @throws RuntimeNodeGroupPlacementException If none of the (existing) alive launchers meet the restrictions imposed by all
+	 *         members of the NodeGroup being scheduled.
 	 */
-	public boolean schedule() throws InsufficientLaunchersException;
+	public boolean schedule() throws InsufficientLaunchersException, RuntimeGlobalPlacementException, RuntimeNodeGroupPlacementException;
 
 	/**
 	 * Informs the scheduler a particular NodeGroup has finished its execution.

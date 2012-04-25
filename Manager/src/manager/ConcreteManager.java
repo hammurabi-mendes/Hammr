@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011, Hammurabi Mendes
+Copyright (c) 2012, Hammurabi Mendes
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -22,7 +22,9 @@ import java.util.Collections;
 import java.util.Collection;
 
 import java.util.Set;
-
+import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,19 +33,35 @@ import java.io.Serializable;
 
 import java.net.InetSocketAddress;
 
+import appspecs.Node;
 import appspecs.ApplicationSpecification;
+
+import authentication.AuthenticationDatabase;
+import authentication.PasswordAuthenticationDatabase;
 
 import exceptions.InexistentInputException;
 import exceptions.InexistentOutputException;
+
+import exceptions.AuthenticationException;
+
+import exceptions.ParsingNodeGroupPlacementException;
+
+import exceptions.RuntimeGlobalPlacementException;
+import exceptions.RuntimeNodeGroupPlacementException;
 
 import exceptions.InsufficientLaunchersException;
 import exceptions.TemporalDependencyException;
 import exceptions.CyclicDependencyException;
 
+import execinfo.LauncherInformation;
 import execinfo.ResultSummary;
 
 import scheduler.Scheduler;
 import scheduler.ConcreteScheduler;
+
+import security.CollocationStatus;
+import security.authenticators.Authenticator;
+import security.restrictions.LauncherRestrictions;
 
 import utilities.RMIHelper;
 
@@ -58,10 +76,15 @@ public class ConcreteManager implements Manager {
 	private String baseDirectory;
 
 	// Active launchers, mapped by ID
-	private Map<String, Launcher> registeredLaunchers;
+	private Map<String, Launcher> launcherMap;
+
+	private Map<String, LauncherInformation> launcherInformationMap;
 
 	// Active applications, mapped by name
 	private Map<String, ApplicationInformationHolder> applicationInformationHolders;
+
+	// Information about user and application authentication
+	private AuthenticationDatabase authenticationDatabase;
 
 	static {
 		String registryLocation = System.getProperty("java.rmi.server.location");
@@ -82,9 +105,9 @@ public class ConcreteManager implements Manager {
 
 		ConcreteManager manager = new ConcreteManager(baseDirectory);
 
-		// Makes the manager available for remote calls
+		// Makes the manager available for remote calls, using SSL
 
-		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", manager);
+		RMIHelper.exportAndRegisterRemoteObject(registryLocation, "Manager", manager, true);
 
 		return manager;
 	}
@@ -106,9 +129,24 @@ public class ConcreteManager implements Manager {
 	private ConcreteManager(String baseDirectory) {
 		this.baseDirectory = baseDirectory;
 
-		this.registeredLaunchers = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
+		this.launcherMap = Collections.synchronizedMap(new LinkedHashMap<String, Launcher>());
+
+		this.launcherInformationMap = Collections.synchronizedMap(new LinkedHashMap<String, LauncherInformation>());
 
 		this.applicationInformationHolders = Collections.synchronizedMap(new HashMap<String, ApplicationInformationHolder>());
+
+		this.authenticationDatabase = new PasswordAuthenticationDatabase();
+
+		((PasswordAuthenticationDatabase) authenticationDatabase).initialize(baseDirectory);
+	}
+
+	/**
+	 * Returns the base working directory of the Manager.
+	 * 
+	 * @return Base directory of the Manager.
+	 */
+	public String getBaseDirectory() {
+		return baseDirectory;
 	}
 
 	/**
@@ -119,13 +157,14 @@ public class ConcreteManager implements Manager {
 	 * @return True unless the launcher is not reachable.
 	 */
 	public boolean registerLauncher(Launcher launcher) {
-		String launcherId;
-
 		try {
-			launcherId = launcher.getId();
+			LauncherInformation launcherInformation = launcher.getInformation();
 
-			registeredLaunchers.put(launcherId, launcher);
-			System.out.println("Registered launcher with ID " + launcherId);
+			launcherMap.put(launcherInformation.getId(), launcher);
+
+			launcherInformationMap.put(launcherInformation.getId(), launcherInformation);
+
+			System.out.println("Registered launcher with ID " + launcherInformation.getId());
 
 			return true;
 		} catch (RemoteException exception) {
@@ -159,6 +198,24 @@ public class ConcreteManager implements Manager {
 		}
 
 		try {
+			// Authenticate User, Application, and Nodes, if the authenticators are present
+
+			if(applicationSpecification.getUserAuthenticator() != null) {
+				authenticationDatabase.authenticateUser(applicationSpecification.getUserAuthenticator());
+			}
+
+			if(applicationSpecification.getApplicationAuthenticator() != null) {
+				authenticationDatabase.authenticateApplication(applicationSpecification.getApplicationAuthenticator());
+			}
+
+			Map<Node,Authenticator> nodeAuthenticators = applicationSpecification.getNodeAuthenticators();
+
+			for(Node node: nodeAuthenticators.keySet()) {
+				Authenticator authenticator = nodeAuthenticators.get(node);
+
+				authenticationDatabase.authenticateNode(authenticator);
+			}
+
 			ApplicationInformationHolder applicationInformationHolder = setupApplication(applicationName, applicationSpecification);
 
 			Scheduler scheduler = applicationInformationHolder.getApplicationScheduler();
@@ -169,6 +226,10 @@ public class ConcreteManager implements Manager {
 				finishApplication(applicationName);
 				return false;
 			}
+		} catch (AuthenticationException exception) {
+			System.err.println("Initial authentication failed: "+ exception.toString());
+
+			return false;
 		} catch (TemporalDependencyException exception) {
 			System.err.println("Scheduler setup found a temporal dependency problem");
 
@@ -179,13 +240,28 @@ public class ConcreteManager implements Manager {
 
 			finishApplication(applicationName);
 			return false;
-		} catch (InsufficientLaunchersException exception) {
-			System.err.println("Initial schedule indicated an insufficient number of launchers");
+		} catch (ParsingNodeGroupPlacementException exception) {
+			System.err.println("Initial schedule indicated authentication faiure or inability to meet security criteria");
 
 			finishApplication(applicationName);
 			return false;
 		} catch (InexistentInputException exception) {
 			System.err.println("Initial schedule indicated that some files are missing: " + exception.toString());
+
+			finishApplication(applicationName);
+			return false;
+		} catch (InsufficientLaunchersException exception) {
+			System.err.println("Insuficient number of Launchers to run the application");
+
+			finishApplication(applicationName);
+			return false;
+		} catch (RuntimeGlobalPlacementException exception) {
+			System.err.println("Insuficient number of Launchers that meet global security criteria to run the application");
+
+			finishApplication(applicationName);
+			return false;
+		} catch (RuntimeNodeGroupPlacementException exception) {
+			System.err.println("Insuficient number of Launchers that meet fine-grained node security criteria to run the application");
 
 			finishApplication(applicationName);
 			return false;
@@ -347,8 +423,18 @@ public class ConcreteManager implements Manager {
 			}
 
 			return true;
+		} catch (RuntimeGlobalPlacementException exception) {
+			System.err.println("Unable to proceed scheduling for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
+
+			finishApplication(resultSummary.getNodeGroupApplication());
+			return false;
+		} catch (RuntimeNodeGroupPlacementException exception) {
+			System.err.println("Unable to proceed scheduling for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
+
+			finishApplication(resultSummary.getNodeGroupApplication());
+			return false;
 		} catch (InsufficientLaunchersException exception) {
-			System.err.println("Unable to proceed scheduling for application " + resultSummary.getNodeGroupApplication() + "! Aborting application...");
+			System.err.println("Unable to proceed scheduling for application " + resultSummary.getNodeGroupApplication() + ":" + exception.toString() + " Aborting application...");
 
 			finishApplication(resultSummary.getNodeGroupApplication());
 			return false;
@@ -377,8 +463,9 @@ public class ConcreteManager implements Manager {
 	 * @throws TemporalDependencyException If the application specification has a temporal dependency problem.
 	 * @throws CyclicDependencyException If the application specification has a cyclic dependency problem.
 	 * @throws InexistentInputException If one of the inputs for the first iteration are missing.
+	 * @throws ParsingNodeGroupPlacementException  If the node placement restrictions are incompatible with the graph parsing.
 	 */
-	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException, InexistentInputException {
+	private synchronized ApplicationInformationHolder setupApplication(String applicationName, ApplicationSpecification applicationSpecification) throws TemporalDependencyException, CyclicDependencyException, InexistentInputException, ParsingNodeGroupPlacementException {
 		ApplicationInformationHolder applicationInformationHolder = new ApplicationInformationHolder();
 
 		Scheduler applicationScheduler = new ConcreteScheduler(applicationName);
@@ -429,9 +516,227 @@ public class ConcreteManager implements Manager {
 	 * @return The list of registered launchers.
 	 */
 	public Collection<Launcher> getRegisteredLaunchers() {
-		return registeredLaunchers.values();
+		return launcherMap.values();
 	}
 
+	/**
+	 * Returns the list of registered launchers, respecting the global user/application placement restrictions,
+	 * as well as fine-grained node placement restrictions.
+	 * 
+	 * @return The list of registered launchers, respecting the security criteria described above.
+	 * 
+	 * @throws RuntimeGlobalPlacementException If alive launchers exist, but none satisfies global user/application placement restrictions.
+	 * @throws RuntimeNodeGroupPlacementException If alive launchers satisfying global security criteria exist, but note satisfies fine-grained
+	 *                                            node placement restrictions.
+	 */
+	public Collection<Launcher> getRegisteredLaunchers(String application, Set<Node> nodes) throws RuntimeGlobalPlacementException, RuntimeNodeGroupPlacementException {
+		ApplicationSpecification specification = applicationInformationHolders.get(application).getApplicationSpecification();
+
+		// Filter Launchers that satisfy global user/application restrictions
+
+		String userRestriction = (specification.getUserAuthenticator() != null ? specification.getUserAuthenticator().getEntity() : null);
+		String applicationRestriction = (specification.getApplicationAuthenticator() != null ? specification.getApplicationAuthenticator().getEntity() : null);
+
+		List<LauncherInformation> globalFilteredLaunchers = new ArrayList<LauncherInformation>();
+
+		for(LauncherInformation launcherInformation: launcherInformationMap.values()) {
+			if(checkGlobalLauncherCompatibility(userRestriction, applicationRestriction, specification.getGlobalRestrictions(), launcherInformation)) {
+				globalFilteredLaunchers.add(launcherInformation);
+			}
+		}
+
+		if(globalFilteredLaunchers.size() == 0 && launcherMap.size() > 0) {
+			throw new RuntimeGlobalPlacementException();
+		}
+
+		// Filter Launchers that satisfy node restrictions
+
+		List<Launcher> fineFilteredLaunchers = new ArrayList<Launcher>();
+
+		for(LauncherInformation launcherInformation: globalFilteredLaunchers) {
+			boolean insert = true;
+
+			for(Node node: nodes) {
+				String nodeRestriction = (specification.obtainNodeAuthenticator(node) != null ? specification.obtainNodeAuthenticator(node).getEntity() : null);
+
+				if(!checkNodeLauncherCompatibility(nodeRestriction, specification.obtainNodeRestriction(node), launcherInformation)) {
+					insert = false;
+					break;
+				}
+			}
+
+			if(insert) {
+				fineFilteredLaunchers.add(launcherMap.get(launcherInformation.getId()));
+			}
+		}
+
+		if(fineFilteredLaunchers.size() == 0 && launcherMap.size() > 0) {
+			throw new RuntimeNodeGroupPlacementException();
+		}
+
+		return fineFilteredLaunchers;
+	}
+
+	/**
+	 * Checks if a Launcher is compatible with global security parameters.
+	 * 
+	 * @param userRestriction Client identifier.
+	 * @param applicationRestriction Application identifier.
+	 * @param launcherRestrictions Global security restrictions of the application.
+	 * @param launcherInformation Information about the Launcher to be checked.
+	 * 
+	 * @return True iff the Launcher is compatible with the global security parameters.
+	 */
+	boolean checkGlobalLauncherCompatibility(String userRestriction, String applicationRestriction, LauncherRestrictions launcherRestrictions, LauncherInformation launcherInformation) {
+		boolean useUserSpecificLaunchers = false;
+		boolean useApplicationSpecificLaunchers = false;
+
+		CollocationStatus collocationStatus = CollocationStatus.SHARED_OTHERUSER;
+
+		Set<String> launcherIds = new HashSet<String>();
+
+		int freeLauncherSlots = 0;
+
+		// Initiate the restrictions with the global restrictions
+		if(launcherRestrictions != null) {
+			useUserSpecificLaunchers = launcherRestrictions.isUseUserSpecificLaunchers();
+			useApplicationSpecificLaunchers = launcherRestrictions.isUseApplicationSpecificLaunchers();
+
+			collocationStatus = launcherRestrictions.getCollocationStatus();
+
+			launcherIds.addAll(launcherRestrictions.getLauncherIds());
+
+			freeLauncherSlots = launcherRestrictions.getFreeLauncherSlots();
+		}
+
+		// If the application has a restriction, it should match the Launcher's
+		// If the application does not have a restriction, the Launcher should not have a restriction
+
+		if(useUserSpecificLaunchers && userRestriction != null) {
+			if(!launcherInformation.getUserRestrictions().contains(userRestriction)) {
+				return false;
+			}
+		}
+		else if(launcherInformation.getUserRestrictions().size() != 0) {
+			return false;
+		}
+
+		if(useApplicationSpecificLaunchers && applicationRestriction != null) {
+			if(!launcherInformation.getApplicationRestrictions().contains(applicationRestriction)) {
+				return false;
+			}
+		}
+		else if(launcherInformation.getApplicationRestrictions().size() != 0) {
+			return false;
+		}
+
+		// If the application request restricted isolation parameters,
+		// the Launcher should satisfy them
+
+		switch(collocationStatus) {
+		case SHARED_SAMEUSER:
+			if(launcherInformation.getColocationStatus() == CollocationStatus.SHARED_OTHERUSER) {
+				return false;
+			}
+			break;
+		case ISOLATED:
+			if(launcherInformation.getColocationStatus() == CollocationStatus.SHARED_SAMEUSER || launcherInformation.getColocationStatus() == CollocationStatus.SHARED_OTHERUSER) {
+				return false;
+			}
+			break;
+		}
+
+		// If the application requested for specific Launchers, disconsider
+		// every Launcher different than those specified
+
+		if(launcherIds.size() > 0 && !launcherIds.contains(launcherInformation.getId())) {
+			return false;
+		}
+
+		// If the application requested some specific baseline of free slots,
+		// the Launcher should have that amount of slots available
+
+		if(launcherInformation.getFreeSlots() < freeLauncherSlots) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks if a Launcher is compatible with node security parameters.
+	 * 
+	 * @param nodeRestriction Node identifier.
+	 * @param launcherRestrictions Node security restrictions.
+	 * @param launcherInformation Information about the Launcher to be checked.
+	 * 
+	 * @return True iff the Launcher is compatible with the global security parameters.
+	 */
+	boolean checkNodeLauncherCompatibility(String nodeRestriction, LauncherRestrictions launcherRestrictions, LauncherInformation launcherInformation) {
+		boolean useNodeSpecificLaunchers = false;
+
+		CollocationStatus collocationStatus = CollocationStatus.SHARED_OTHERUSER;
+
+		Set<String> launcherIds = new HashSet<String>();
+
+		int freeLauncherSlots = 0;
+
+		// Initiate the restrictions with the global restrictions
+		if(launcherRestrictions != null) {
+			useNodeSpecificLaunchers = launcherRestrictions.isUseNodeSpecificLaunchers();
+
+			collocationStatus = launcherRestrictions.getCollocationStatus();
+
+			launcherIds.addAll(launcherRestrictions.getLauncherIds());
+
+			freeLauncherSlots = launcherRestrictions.getFreeLauncherSlots();
+		}
+
+		// If the application has a restriction, it should match the Launcher's
+		// If the application does not have a restriction, the Launcher should not have a restriction
+
+		if(useNodeSpecificLaunchers && nodeRestriction != null) {
+			if(!launcherInformation.getNodeRestrictions().contains(nodeRestriction)) {
+				return false;
+			}
+		}
+		else if(launcherInformation.getNodeRestrictions().size() != 0) {
+			return false;
+		}
+
+		// If the application request restricted isolation parameters,
+		// the Launcher should satisfy them
+
+		switch(collocationStatus) {
+		case SHARED_SAMEUSER:
+			if(launcherInformation.getColocationStatus() == CollocationStatus.SHARED_OTHERUSER) {
+				return false;
+			}
+			break;
+		case ISOLATED:
+			if(launcherInformation.getColocationStatus() == CollocationStatus.SHARED_SAMEUSER || launcherInformation.getColocationStatus() == CollocationStatus.SHARED_OTHERUSER) {
+				return false;
+			}
+			break;
+		}
+
+		// If the application requested for specific Launchers, disconsider
+		// every Launcher different than those specified
+
+		if(launcherIds.size() > 0 && !launcherIds.contains(launcherInformation.getId())) {
+			return false;
+		}
+
+		// If the application requested some specific baseline of free slots,
+		// the Launcher should have that amount of slots available
+
+		if(launcherInformation.getFreeSlots() < freeLauncherSlots) {
+			return false;
+		}
+
+		return true;
+	}
+	
 	/**
 	 * Returns the requested application information holder.
 	 * 
@@ -464,9 +769,7 @@ public class ConcreteManager implements Manager {
 	/**
 	 * Manager startup method.
 	 * 
-	 * @param arguments A list containing:
-	 *        1) The registry location;
-	 *        2) The manager working directory.
+	 * @param arguments Ignored
 	 */
 	public static void main(String[] arguments) {
 		System.out.println("Running " + ConcreteManager.getInstance().toString());
