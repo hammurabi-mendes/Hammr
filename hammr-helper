@@ -29,6 +29,15 @@ KEYSTORE_PWD="123456"
 TRUSTSTORE="$BASEDIR/Common/truststore"
 TRUSTSTORE_PWD="123456"
 
+LAUNCHER_USER_RESTRICTIONS="-Dhammr.launcher.user_restrictions=''"
+LAUNCHER_APPLICATION_RESTRICTIONS="-Dhammr.launcher.application_restrictions=''"
+LAUNCHER_NODE_RESTRICTIONS="-Dhammr.launcher.node_restrictions=''"
+
+LAUNCHER_COLLOCATION_STATUS="-Dhammr.launcher.collocation_status=''"
+
+LAUNCHER_FLAGS=""
+#LAUNCHER_FLAGS="$LAUNCHER_USER_RESTRICTIONS $LAUNCHER_APPLICATION_RESTRICTIONS $LAUNCHER_NODE_RESTRICTIONS $LAUNCHER_COLLOCATION_STATUS"
+
 export CODEBASE="file://${BASEDIR}/Common/bin/"
 
 export CLASSPATH=$BINDIRS:$JGRAPHFILE:$HADOOPFILE
@@ -69,7 +78,7 @@ RunManager() {
 
 RunLauncher() {
 	echo "Running launcher: codebase=${CODEBASE} and registry=${REGISTRYLOC}"
-	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy launcher.ConcreteLauncher $@
+	java -cp $CLASSPATH $HEAPPARAMS -Djava.rmi.server.location=$REGISTRYLOC -Djava.rmi.server.codebase=$CODEBASE -Djava.security.policy=$BASEDIR/Launcher/security.policy $LAUNCHER_FLAGS launcher.ConcreteLauncher $@
 }
 
 RunTest() {
