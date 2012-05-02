@@ -22,7 +22,7 @@ public abstract class Decider implements Serializable {
 
 	protected ApplicationSpecification applicationSpecification;
 
-	private boolean requiresRunning;
+	protected boolean requiresRunning;
 
 	protected Map<String, ApplicationAggregator<? extends Serializable, ? extends Serializable>> aggregatedVariables;
 

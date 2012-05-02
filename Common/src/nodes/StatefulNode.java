@@ -18,21 +18,37 @@ import communication.channel.ChannelElement;
 public abstract class StatefulNode extends Node {
 	private static final long serialVersionUID = 1L;
 
+	protected volatile boolean terminate;
+
+	public StatefulNode() {
+		terminate = false;
+	}
+
 	public void run() {
 		if(!performInitialization()) {
+			// Failed initialization: just shut down
+
+			performTermination();
+
+			shutdown();
+
 			return;
 		}
 
 		ChannelElement channelElement;
 
 		while(true) {
-			channelElement = readSomeone();
+			channelElement = read();
 
 			if(channelElement == null) {
-				break;
+				performActionNothingPresent();
 			}
 			else {
 				performAction(channelElement);
+			}
+
+			if(terminate) {
+				break;
 			}
 		}
 
@@ -45,5 +61,11 @@ public abstract class StatefulNode extends Node {
 
 	protected abstract void performAction(ChannelElement channelElement);
 
+	protected abstract void performActionNothingPresent();
+
 	protected abstract boolean performTermination();
+
+	protected ChannelElement read() {
+		return readSomeone();
+	}
 }

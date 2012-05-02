@@ -24,6 +24,10 @@ public class ReaderSomeoneWriterEveryone extends StatefulNode {
 		writeEveryone(channelElement);
 	}
 
+	protected void performActionNothingPresent() {
+		terminate = true;
+	}
+
 	protected boolean performTermination() {
 		return true;
 	}

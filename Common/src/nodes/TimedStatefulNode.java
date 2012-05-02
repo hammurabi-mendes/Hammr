@@ -22,8 +22,6 @@ public abstract class TimedStatefulNode extends StatefulNode {
 
 	private TimeUnit timeUnit;
 
-	protected volatile boolean terminate;
-
 	public TimedStatefulNode(int timeout, TimeUnit timeUnit) {
 		this.timeout = timeout;
 
@@ -32,32 +30,7 @@ public abstract class TimedStatefulNode extends StatefulNode {
 		this.terminate = false;
 	}
 
-	public void run() {
-		if(!performInitialization()) {
-			return;
-		}
-
-		ChannelElement channelElement;
-
-		while(true) {
-			channelElement = tryReadSomeone(timeout, timeUnit);
-
-			if(channelElement == null) {
-				performActionNothingPresent();
-			}
-			else {
-				performAction(channelElement);
-			}
-
-			if(terminate) {
-				break;
-			}
-		}
-
-		performTermination();
-
-		shutdown();		
+	protected ChannelElement read() {
+		return tryReadSomeone(timeout, timeUnit);
 	}
-
-	protected abstract void performActionNothingPresent();
 }
